@@ -56,12 +56,36 @@ class AuthProvider with ChangeNotifier {
       if (response.containsKey('token')) {
         _token = response['token'];
         _user = response['user'];
+        // Do not set authenticated yet, need verification
+
+        // Save token temporarily for verification
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('temp_token', _token!);
+        await prefs.setString('temp_user', _user.toString());
+
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> verifyAccount(String type, String code) async {
+    try {
+      final response = await _apiService.verifyAccount(type, code);
+
+      if (response.containsKey('message')) {
+        // Verification successful, now set authenticated
         _isAuthenticated = true;
 
-        // Save to persistent storage
+        // Move from temp to permanent
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
         await prefs.setString('user', _user.toString());
+        await prefs.remove('temp_token');
+        await prefs.remove('temp_user');
 
         notifyListeners();
         return true;

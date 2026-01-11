@@ -155,9 +155,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration successful! Please login.')),
+        SnackBar(content: Text('Registration successful! Please verify your account.')),
       );
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, '/verify');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: ${e.toString()}')),

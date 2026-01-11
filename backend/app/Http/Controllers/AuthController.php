@@ -71,6 +71,11 @@ class AuthController extends Controller
 
         $user = auth()->user();
 
+        // Check if account is verified
+        if (!$user->email_verified && !$user->phone_verified) {
+            return response()->json(['error' => 'Account not verified. Please verify your email or phone first.'], 401);
+        }
+
         return response()->json([
             'message' => 'Login successful',
             'user' => $user,
