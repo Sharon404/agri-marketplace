@@ -26,6 +26,8 @@ class User extends Authenticatable implements JWTSubject
         'role', // farmer, buyer, admin, agent
         'email_verified',
         'phone_verified',
+        'activation_token',
+        'activated_at',
     ];
 
     /**

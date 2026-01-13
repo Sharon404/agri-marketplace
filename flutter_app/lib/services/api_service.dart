@@ -43,28 +43,16 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> verifyAccount(String type, String code) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/verify'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode({
-        'type': type,
-        'code': code,
-      }),
+  Future<Map<String, dynamic>> activateAccount(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/activate/$token'),
+      headers: {'Content-Type': 'application/json'},
     );
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Verification failed');
+      throw Exception('Activation failed');
     }
   }
 

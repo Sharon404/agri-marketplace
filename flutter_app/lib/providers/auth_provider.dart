@@ -53,17 +53,10 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.register(name, email, phone, password, role);
 
-      if (response.containsKey('token')) {
-        _token = response['token'];
-        _user = response['user'];
-        // Do not set authenticated yet, need verification
-
-        // Save token temporarily for verification
+      if (response.containsKey('activation_url')) {
+        // Store activation URL temporarily for later use
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('temp_token', _token!);
-        await prefs.setString('temp_user', _user.toString());
-
-        notifyListeners();
+        await prefs.setString('activation_url', response['activation_url']);
         return true;
       }
       return false;
@@ -72,22 +65,14 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> verifyAccount(String type, String code) async {
+  Future<bool> activateAccount(String token) async {
     try {
-      final response = await _apiService.verifyAccount(type, code);
+      final response = await _apiService.activateAccount(token);
 
-      if (response.containsKey('message')) {
-        // Verification successful, now set authenticated
-        _isAuthenticated = true;
-
-        // Move from temp to permanent
+      if (response.containsKey('message') && response['message'].contains('activated')) {
+        // Clear activation URL
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('token', _token!);
-        await prefs.setString('user', _user.toString());
-        await prefs.remove('temp_token');
-        await prefs.remove('temp_user');
-
-        notifyListeners();
+        await prefs.remove('activation_url');
         return true;
       }
       return false;

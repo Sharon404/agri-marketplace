@@ -7,6 +7,7 @@ use App\Models\Verification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use PHPOpenSourceSaver\JWTAuth\Facades\JWTAuth;
 
 class AuthController extends Controller
@@ -43,21 +44,16 @@ class AuthController extends Controller
             ]);
         }
 
-        if ($request->phone) {
-            Verification::create([
-                'user_id' => $user->id,
-                'type' => 'phone',
-                'code' => rand(100000, 999999),
-                'expires_at' => now()->addMinutes(15),
-            ]);
-        }
+        $user->activation_token = Str::random(64);
+        $user->save();
 
-        $token = JWTAuth::fromUser($user);
+        // Send activation email (you can implement this later)
+        // Mail::to($user->email)->send(new ActivationEmail($user));
 
         return response()->json([
-            'message' => 'User registered successfully',
+            'message' => 'User registered successfully. Please check your email for activation link.',
             'user' => $user,
-            'token' => $token,
+            'activation_url' => url('/api/activate/' . $user->activation_token),
         ], 201);
     }
 
@@ -71,9 +67,9 @@ class AuthController extends Controller
 
         $user = auth()->user();
 
-        // Check if account is verified
-        if (!$user->email_verified && !$user->phone_verified) {
-            return response()->json(['error' => 'Account not verified. Please verify your email or phone first.'], 401);
+        // Check if account is activated
+        if (!$user->activated_at) {
+            return response()->json(['error' => 'Account not activated. Please check your email for activation link.'], 401);
         }
 
         return response()->json([
@@ -100,36 +96,24 @@ class AuthController extends Controller
         ]);
     }
 
-    public function verify(Request $request)
+    public function activate($token)
     {
-        $validator = Validator::make($request->all(), [
-            'type' => 'required|in:email,phone',
-            'code' => 'required|string',
+        $user = User::where('activation_token', $token)->first();
+
+        if (!$user) {
+            return response()->json(['error' => 'Invalid activation token'], 400);
+        }
+
+        if ($user->activated_at) {
+            return response()->json(['message' => 'Account already activated'], 200);
+        }
+
+        $user->update([
+            'activation_token' => null,
+            'activated_at' => now(),
+            'email_verified' => true,
         ]);
 
-        if ($validator->fails()) {
-            return response()->json($validator->errors(), 422);
-        }
-
-        $user = auth()->user();
-        $verification = Verification::where('user_id', $user->id)
-            ->where('type', $request->type)
-            ->where('code', $request->code)
-            ->where('expires_at', '>', now())
-            ->first();
-
-        if (!$verification) {
-            return response()->json(['error' => 'Invalid or expired verification code'], 400);
-        }
-
-        $verification->update(['verified_at' => now()]);
-
-        if ($request->type === 'email') {
-            $user->update(['email_verified' => true]);
-        } else {
-            $user->update(['phone_verified' => true]);
-        }
-
-        return response()->json(['message' => ucfirst($request->type) . ' verified successfully']);
+        return response()->json(['message' => 'Account activated successfully. You can now login.'], 200);
     }
 }

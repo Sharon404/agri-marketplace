@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/verify_screen.dart';
+import 'screens/activation_screen.dart';
 import 'screens/home_screen.dart';
 
 void main() {
@@ -18,7 +18,7 @@ void main() {
 }
 
 class AgriMarketplaceApp extends StatelessWidget {
-  const AgriMarketplaceApp({super.key});
+  const AgriMarketplaceApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +36,7 @@ class AgriMarketplaceApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/verify': (context) => const VerifyScreen(),
+        '/activation': (context) => const ActivationScreen(),
         '/home': (context) => const HomeScreen(),
       },
     );

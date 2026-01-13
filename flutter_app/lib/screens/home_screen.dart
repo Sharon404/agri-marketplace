@@ -4,6 +4,8 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
   @override
   _HomeScreenState createState() => _HomeScreenState();
 }
@@ -44,10 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Agri Marketplace'),
+        title: const Text('Agri Marketplace'),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () async {
               await authProvider.logout();
               Navigator.pushReplacementNamed(context, '/login');
@@ -56,19 +58,19 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 children: [
                   Text(
                     'Welcome, ${authProvider.user?['name'] ?? 'User'}!',
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   _buildSection('Farmer Listings', _listings, Icons.agriculture),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   _buildSection('Buyer Requests', _requests, Icons.shopping_cart),
                 ],
               ),
@@ -83,8 +85,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Navigator.pushNamed(context, '/create-request');
           }
         },
-        child: Icon(Icons.add),
         tooltip: 'Create New',
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -96,18 +98,18 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           children: [
             Icon(icon, size: 24),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge,
             ),
           ],
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         items.isEmpty
             ? Card(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Text('No $title available'),
                 ),
               )
@@ -136,13 +138,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final location = item['location'] ?? 'Unknown Location';
 
     return Card(
-      margin: EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
         title: Text(productName),
-        subtitle: Text('$quantity units • \$${price} each • $location'),
+        subtitle: Text('$quantity units • \$$price each • $location'),
         trailing: type == 'Farmer Listings'
-            ? Icon(Icons.sell, color: Colors.green)
-            : Icon(Icons.shopping_bag, color: Colors.blue),
+            ? const Icon(Icons.sell, color: Colors.green)
+            : const Icon(Icons.shopping_bag, color: Colors.blue),
         onTap: () {
           // Navigate to detail view
           Navigator.pushNamed(
