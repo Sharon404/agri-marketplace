@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:8000/api'; // Android emulator localhost
+  static const String baseUrl = 'http://localhost:8000/api'; // Localhost for web development
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     final response = await http.post(
@@ -39,20 +39,9 @@ class ApiService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Registration failed');
-    }
-  }
-
-  Future<Map<String, dynamic>> activateAccount(String token) async {
-    final response = await http.get(
-      Uri.parse('$baseUrl/activate/$token'),
-      headers: {'Content-Type': 'application/json'},
-    );
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Activation failed');
+      final errorBody = jsonDecode(response.body);
+      final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
+      throw Exception('Registration failed: $errorMessage (Status: ${response.statusCode})');
     }
   }
 
@@ -94,9 +83,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['data'];
+      return data['data'] ?? [];
     } else {
-      throw Exception('Failed to load listings');
+      throw Exception('Failed to load listings: ${response.statusCode} - ${response.body}');
     }
   }
 
@@ -165,7 +154,9 @@ class ApiService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      throw Exception('Failed to create listing');
+      final errorBody = jsonDecode(response.body);
+      final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
+      throw Exception('Failed to create listing: $errorMessage (Status: ${response.statusCode})');
     }
   }
 

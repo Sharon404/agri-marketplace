@@ -27,16 +27,20 @@ class _HomeScreenState extends State<HomeScreen> {
       final listings = await _apiService.getFarmerListings();
       final requests = await _apiService.getBuyerRequests();
 
-      setState(() {
-        _listings = listings;
-        _requests = requests;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _listings = listings;
+          _requests = requests;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load data: ${e.toString()}')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load data: ${e.toString()}')),
+        );
+      }
     }
   }
 

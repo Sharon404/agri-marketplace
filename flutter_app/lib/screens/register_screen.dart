@@ -85,7 +85,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 items: const [
                   DropdownMenuItem(value: 'farmer', child: Text('Farmer')),
                   DropdownMenuItem(value: 'buyer', child: Text('Buyer')),
-                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
                 onChanged: (value) {
                   setState(() => _selectedRole = value!);
@@ -148,7 +147,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.register(
+      final success = await authProvider.register(
         _nameController.text,
         _emailController.text,
         _phoneController.text,
@@ -156,11 +155,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _selectedRole,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration successful! Please check your email for activation link.')),
-      );
-      Navigator.pushNamed(context, '/activation');
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration successful! Welcome to Agri Marketplace.')),
+        );
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Registration failed: Could not create account')),
+        );
+      }
     } catch (e) {
+      print('Registration error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Registration failed: ${e.toString()}')),
       );

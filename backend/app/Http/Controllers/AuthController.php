@@ -32,28 +32,16 @@ class AuthController extends Controller
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'role' => $request->role,
+            'email_verified' => true, // Auto-verify for development
+            'activated_at' => now(), // Auto-activate for development
         ]);
 
-        // Send verification codes (simplified - in production use queues/notifications)
-        if ($request->email) {
-            Verification::create([
-                'user_id' => $user->id,
-                'type' => 'email',
-                'code' => rand(100000, 999999),
-                'expires_at' => now()->addMinutes(15),
-            ]);
-        }
-
-        $user->activation_token = Str::random(64);
-        $user->save();
-
-        // Send activation email (you can implement this later)
-        // Mail::to($user->email)->send(new ActivationEmail($user));
+        $token = JWTAuth::fromUser($user);
 
         return response()->json([
-            'message' => 'User registered successfully. Please check your email for activation link.',
+            'message' => 'User registered successfully',
             'user' => $user,
-            'activation_url' => url('/api/activate/' . $user->activation_token),
+            'token' => $token,
         ], 201);
     }
 
@@ -66,11 +54,6 @@ class AuthController extends Controller
         }
 
         $user = auth()->user();
-
-        // Check if account is activated
-        if (!$user->activated_at) {
-            return response()->json(['error' => 'Account not activated. Please check your email for activation link.'], 401);
-        }
 
         return response()->json([
             'message' => 'Login successful',

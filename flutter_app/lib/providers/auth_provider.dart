@@ -53,31 +53,23 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.register(name, email, phone, password, role);
 
-      if (response.containsKey('activation_url')) {
-        // Store activation URL temporarily for later use
+      if (response.containsKey('token')) {
+        _token = response['token'];
+        _user = response['user'];
+        _isAuthenticated = true;
+
+        // Save to persistent storage
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('activation_url', response['activation_url']);
+        await prefs.setString('token', _token!);
+        await prefs.setString('user', _user.toString());
+
+        notifyListeners();
         return true;
       }
       return false;
     } catch (e) {
-      return false;
-    }
-  }
-
-  Future<bool> activateAccount(String token) async {
-    try {
-      final response = await _apiService.activateAccount(token);
-
-      if (response.containsKey('message') && response['message'].contains('activated')) {
-        // Clear activation URL
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('activation_url');
-        return true;
-      }
-      return false;
-    } catch (e) {
-      return false;
+      print('Registration error: $e');
+      throw Exception('Registration failed: ${e.toString()}');
     }
   }
 

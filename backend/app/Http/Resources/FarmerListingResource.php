@@ -19,7 +19,6 @@ class FarmerListingResource extends JsonResource
             'farmer' => [
                 'id' => $this->farmer->id,
                 'name' => $this->farmer->name,
-                'location' => $this->farmer->location ?? null,
             ],
             'product' => [
                 'id' => $this->product->id,

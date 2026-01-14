@@ -13,7 +13,8 @@ class ActivationScreen extends StatefulWidget {
 
 class _ActivationScreenState extends State<ActivationScreen> {
   String? _activationUrl;
-  bool _isLoading = false;
+  bool _isLoading = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -22,10 +23,33 @@ class _ActivationScreenState extends State<ActivationScreen> {
   }
 
   Future<void> _loadActivationUrl() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      _activationUrl = prefs.getString('activation_url');
-    });
+    try {
+      setState(() => _isLoading = true);
+
+      final prefs = await SharedPreferences.getInstance();
+      final activationUrl = prefs.getString('activation_url');
+
+      // Add a small delay to ensure data is loaded
+      await Future.delayed(Duration(milliseconds: 100));
+
+      if (activationUrl == null || activationUrl.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'No activation link found. Please try registering again.';
+        });
+        return;
+      }
+
+      setState(() {
+        _activationUrl = activationUrl;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error loading activation link: ${e.toString()}';
+      });
+    }
   }
 
   @override
@@ -50,7 +74,38 @@ class _ActivationScreenState extends State<ActivationScreen> {
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 24),
-            if (_activationUrl != null) ...[
+            if (_errorMessage != null) ...[
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error, size: 64, color: Colors.red),
+                    SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Back to Registration'),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (_isLoading) ...[
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Loading activation link...'),
+                  ],
+                ),
+              ),
+            ] else if (_activationUrl != null) ...[
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(

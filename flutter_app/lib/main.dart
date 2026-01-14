@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
-import 'screens/activation_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/create_listing_screen.dart';
+import 'screens/create_request_screen.dart';
 
 void main() {
   runApp(
@@ -36,8 +37,9 @@ class AgriMarketplaceApp extends StatelessWidget {
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
-        '/activation': (context) => const ActivationScreen(),
         '/home': (context) => const HomeScreen(),
+        '/create-listing': (context) => const CreateListingScreen(),
+        '/create-request': (context) => const CreateRequestScreen(),
       },
     );
   }
