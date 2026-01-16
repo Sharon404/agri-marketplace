@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../services/api_service.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -20,7 +21,7 @@ class AuthProvider with ChangeNotifier {
 
     if (token != null && userData != null) {
       _token = token;
-      _user = Map<String, dynamic>.from(userData as Map);
+      _user = json.decode(userData);
       _isAuthenticated = true;
       notifyListeners();
     }
@@ -38,7 +39,7 @@ class AuthProvider with ChangeNotifier {
         // Save to persistent storage
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
-        await prefs.setString('user', _user.toString());
+        await prefs.setString('user', json.encode(_user));
 
         notifyListeners();
         return true;
@@ -61,7 +62,7 @@ class AuthProvider with ChangeNotifier {
         // Save to persistent storage
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('token', _token!);
-        await prefs.setString('user', _user.toString());
+        await prefs.setString('user', json.encode(_user));
 
         notifyListeners();
         return true;

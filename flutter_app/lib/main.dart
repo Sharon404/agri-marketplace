@@ -6,12 +6,18 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/create_listing_screen.dart';
 import 'screens/create_request_screen.dart';
+import 'screens/admin_dashboard_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final authProvider = AuthProvider();
+  await authProvider.checkAuthStatus();
+  
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => authProvider),
       ],
       child: const AgriMarketplaceApp(),
     ),
@@ -40,6 +46,7 @@ class AgriMarketplaceApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/create-listing': (context) => const CreateListingScreen(),
         '/create-request': (context) => const CreateRequestScreen(),
+        '/admin-dashboard': (context) => const AdminDashboardScreen(),
       },
     );
   }
