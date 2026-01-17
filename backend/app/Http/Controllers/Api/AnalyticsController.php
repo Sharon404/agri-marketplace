@@ -48,6 +48,7 @@ class AnalyticsController extends Controller
             'market_highlights' => $marketHighlights,
         ]);
         */
+    }
 
     public function buyerAnalytics(Request $request)
     {
@@ -90,6 +91,7 @@ class AnalyticsController extends Controller
             'supply_highlights' => $supplyHighlights,
         ]);
         */
+    }
 
     private function getMarketHighlights()
     {

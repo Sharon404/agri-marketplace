@@ -23,9 +23,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth:api'
 Route::post('/refresh', [AuthController::class, 'refresh'])->middleware('auth:api');
 Route::get('/activate/{token}', [AuthController::class, 'activate']);
 
-Route::apiResource('products', ProductController::class)->middleware('auth:api');
-Route::apiResource('farmer-listings', FarmerListingController::class)->middleware('auth:api');
-Route::apiResource('buyer-requests', BuyerRequestController::class)->middleware('auth:api');
+Route::apiResource('products', ProductController::class);
+Route::apiResource('farmer-listings', FarmerListingController::class);
+Route::apiResource('buyer-requests', BuyerRequestController::class);
 
 // Analytics routes
 Route::middleware('auth:api')->group(function () {

@@ -12,8 +12,9 @@ class FarmerListingController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
-        $this->middleware('role:farmer')->only(['store', 'update', 'destroy']);
+        // Auth middleware disabled for mock mode
+        // $this->middleware('auth:api');
+        // $this->middleware('role:farmer')->only(['store', 'update', 'destroy']);
     }
 
     /**
@@ -21,31 +22,24 @@ class FarmerListingController extends Controller
      */
     public function index(Request $request)
     {
-        $query = FarmerListing::with(['farmer', 'product'])->active();
-
-        // Filtering
-        if ($request->has('product_id')) {
-            $query->where('product_id', $request->product_id);
+        // Load listings from JSON file
+        $listingsFile = base_path('storage/app/farmer_listings.json');
+        $listingsData = [];
+        if (file_exists($listingsFile)) {
+            $jsonContent = file_get_contents($listingsFile);
+            if ($jsonContent) {
+                $listingsData = json_decode($jsonContent, true);
+            }
         }
 
-        if ($request->has('location')) {
-            $query->where('location', 'like', '%' . $request->location . '%');
-        }
-
-        if ($request->has('min_price')) {
-            $query->where('unit_price', '>=', $request->min_price);
-        }
-
-        if ($request->has('max_price')) {
-            $query->where('unit_price', '<=', $request->max_price);
-        }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        return FarmerListingResource::collection($query->paginate(20));
+        return response()->json([
+            'data' => $listingsData['listings'] ?? [],
+            'meta' => [
+                'total' => count($listingsData['listings'] ?? []),
+                'per_page' => 20,
+                'current_page' => 1,
+            ]
+        ]);
     }
 
     /**
@@ -54,7 +48,7 @@ class FarmerListingController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
+            'product_id' => 'required|integer',
             'quantity' => 'required|numeric|min:0.01',
             'unit_price' => 'required|numeric|min:0.01',
             'location' => 'required|string|max:255',
@@ -66,17 +60,52 @@ class FarmerListingController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $listing = FarmerListing::create([
-            'farmer_id' => auth()->id(),
-            'product_id' => $request->product_id,
-            'quantity' => $request->quantity,
-            'unit_price' => $request->unit_price,
+        // Load listings from JSON file
+        $listingsFile = base_path('storage/app/farmer_listings.json');
+        $listingsData = [];
+        if (file_exists($listingsFile)) {
+            $jsonContent = file_get_contents($listingsFile);
+            if ($jsonContent) {
+                $listingsData = json_decode($jsonContent, true);
+            }
+        }
+
+        // Get product name from products.json
+        $productName = 'Product';
+        $productsFile = base_path('storage/app/products.json');
+        if (file_exists($productsFile)) {
+            $jsonContent = file_get_contents($productsFile);
+            if ($jsonContent) {
+                $productsData = json_decode($jsonContent, true);
+                foreach ($productsData['products'] ?? [] as $product) {
+                    if ($product['id'] === (int)$request->product_id) {
+                        $productName = $product['name'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Create listing
+        $newId = (count($listingsData['listings'] ?? []) + 1);
+        $listing = [
+            'id' => $newId,
+            'farmer_id' => 1,
+            'product_id' => (int)$request->product_id,
+            'product' => ['id' => (int)$request->product_id, 'name' => $productName],
+            'quantity' => (float)$request->quantity,
+            'unit_price' => (float)$request->unit_price,
             'location' => $request->location,
             'availability_date' => $request->availability_date,
             'description' => $request->description,
-        ]);
+            'created_at' => now()->toIso8601String(),
+            'updated_at' => now()->toIso8601String(),
+        ];
 
-        return new FarmerListingResource($listing->load(['farmer', 'product']));
+        $listingsData['listings'][] = $listing;
+        file_put_contents($listingsFile, json_encode($listingsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return response()->json($listing, 201);
     }
 
     /**

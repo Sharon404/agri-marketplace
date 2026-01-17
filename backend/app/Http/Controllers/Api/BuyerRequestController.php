@@ -12,8 +12,9 @@ class BuyerRequestController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
-        $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
+        // Auth middleware disabled for mock mode
+        // $this->middleware('auth:api');
+        // $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
     }
 
     /**
@@ -21,31 +22,24 @@ class BuyerRequestController extends Controller
      */
     public function index(Request $request)
     {
-        $query = BuyerRequest::with(['buyer', 'product'])->active();
-
-        // Filtering
-        if ($request->has('product_id')) {
-            $query->where('product_id', $request->product_id);
+        // Load requests from JSON file
+        $requestsFile = base_path('storage/app/buyer_requests.json');
+        $requestsData = [];
+        if (file_exists($requestsFile)) {
+            $jsonContent = file_get_contents($requestsFile);
+            if ($jsonContent) {
+                $requestsData = json_decode($jsonContent, true);
+            }
         }
 
-        if ($request->has('delivery_location')) {
-            $query->where('delivery_location', 'like', '%' . $request->delivery_location . '%');
-        }
-
-        if ($request->has('urgency')) {
-            $query->where('urgency', $request->urgency);
-        }
-
-        if ($request->has('max_price')) {
-            $query->where('target_price', '<=', $request->max_price);
-        }
-
-        // Sorting
-        $sortBy = $request->get('sort_by', 'created_at');
-        $sortOrder = $request->get('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        return BuyerRequestResource::collection($query->paginate(20));
+        return response()->json([
+            'data' => $requestsData['requests'] ?? [],
+            'meta' => [
+                'total' => count($requestsData['requests'] ?? []),
+                'per_page' => 20,
+                'current_page' => 1,
+            ]
+        ]);
     }
 
     /**
@@ -54,7 +48,7 @@ class BuyerRequestController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|exists:products,id',
+            'product_id' => 'required|integer',
             'quantity' => 'required|numeric|min:0.01',
             'target_price' => 'nullable|numeric|min:0.01',
             'delivery_location' => 'required|string|max:255',
@@ -66,17 +60,52 @@ class BuyerRequestController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        $buyerRequest = BuyerRequest::create([
-            'buyer_id' => auth()->id(),
-            'product_id' => $request->product_id,
-            'quantity' => $request->quantity,
-            'target_price' => $request->target_price,
+        // Load requests from JSON file
+        $requestsFile = base_path('storage/app/buyer_requests.json');
+        $requestsData = [];
+        if (file_exists($requestsFile)) {
+            $jsonContent = file_get_contents($requestsFile);
+            if ($jsonContent) {
+                $requestsData = json_decode($jsonContent, true);
+            }
+        }
+
+        // Get product name from products.json
+        $productName = 'Product';
+        $productsFile = base_path('storage/app/products.json');
+        if (file_exists($productsFile)) {
+            $jsonContent = file_get_contents($productsFile);
+            if ($jsonContent) {
+                $productsData = json_decode($jsonContent, true);
+                foreach ($productsData['products'] ?? [] as $product) {
+                    if ($product['id'] === (int)$request->product_id) {
+                        $productName = $product['name'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Create request
+        $newId = (count($requestsData['requests'] ?? []) + 1);
+        $buyerRequest = [
+            'id' => $newId,
+            'buyer_id' => 2,
+            'product_id' => (int)$request->product_id,
+            'product' => ['id' => (int)$request->product_id, 'name' => $productName],
+            'quantity' => (float)$request->quantity,
+            'target_price' => $request->target_price ? (float)$request->target_price : null,
             'delivery_location' => $request->delivery_location,
             'urgency' => $request->urgency,
             'description' => $request->description,
-        ]);
+            'created_at' => now()->toIso8601String(),
+            'updated_at' => now()->toIso8601String(),
+        ];
 
-        return new BuyerRequestResource($buyerRequest->load(['buyer', 'product']));
+        $requestsData['requests'][] = $buyerRequest;
+        file_put_contents($requestsFile, json_encode($requestsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        return response()->json($buyerRequest, 201);
     }
 
     /**

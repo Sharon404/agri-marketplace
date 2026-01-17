@@ -26,86 +26,91 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // For testing without database - using mock data
+        // Load users from JSON file
+        $usersFile = base_path('storage/app/users.json');
+        $usersData = [];
+        if (file_exists($usersFile)) {
+            $jsonContent = file_get_contents($usersFile);
+            if ($jsonContent) {
+                $usersData = json_decode($jsonContent, true);
+            }
+        }
+
+        // Check if user already exists
+        foreach ($usersData['users'] ?? [] as $existingUser) {
+            if ($existingUser['email'] === $request->email) {
+                return response()->json(['error' => 'Email already exists'], 422);
+            }
+        }
+
+        // Create new user
+        $userId = count($usersData['users'] ?? []) + 1;
         $user = [
-            'id' => rand(1, 1000),
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'role' => $request->role,
-            'email_verified' => true,
-            'phone_verified' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $token = 'mock_jwt_token_' . time() . '_' . $request->role;
-
-        return response()->json([
-            'message' => 'Registration successful',
-            'user' => $user,
-            'token' => $token,
-        ], 201);
-
-        /*
-        $user = User::create([
+            'id' => $userId,
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'role' => $request->role,
-            'email_verified' => true, // Auto-verify for development
-            'activated_at' => now(), // Auto-activate for development
-        ]);
+            'email_verified' => true,
+            'phone_verified' => false,
+            'created_at' => now()->toIso8601String(),
+            'updated_at' => now()->toIso8601String(),
+        ];
 
-        $token = JWTAuth::fromUser($user);
+        $usersData['users'][] = $user;
+
+        // Save to JSON file
+        file_put_contents($usersFile, json_encode($usersData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+
+        // Generate token
+        $token = 'jwt_' . base64_encode($user['id'] . ':' . $user['email'] . ':' . time());
 
         return response()->json([
-            'message' => 'User registered successfully',
-            'user' => $user,
+            'message' => 'Registration successful',
+            'user' => collect($user)->except('password')->toArray(),
             'token' => $token,
         ], 201);
-        */
     }
 
     public function login(Request $request)
     {
-        $credentials = $request->only('email', 'password');
-
-        // For testing without database - mock login
-        $user = [
-            'id' => 1,
-            'name' => 'Test User',
-            'email' => $request->email,
-            'phone' => '+254700000000',
-            'role' => $this->getRoleFromEmail($request->email),
-            'email_verified' => true,
-            'phone_verified' => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ];
-
-        $token = 'mock_jwt_token_' . time() . '_' . $user['role'];
-
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
-            'token' => $token,
-        ]);
-
-        /*
-        if (!$token = JWTAuth::attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        // Load users from JSON file
+        $usersFile = base_path('storage/app/users.json');
+        $usersData = [];
+        if (file_exists($usersFile)) {
+            $jsonContent = file_get_contents($usersFile);
+            if ($jsonContent) {
+                $usersData = json_decode($jsonContent, true);
+            }
         }
 
-        $user = auth()->user();
+        // Find user by email
+        $user = null;
+        foreach ($usersData['users'] ?? [] as $existingUser) {
+            if ($existingUser['email'] === $request->email) {
+                $user = $existingUser;
+                break;
+            }
+        }
+
+        if (!$user) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
+        }
+
+        // Verify password
+        if (!Hash::check($request->password, $user['password'])) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
+        }
+
+        // Generate token
+        $token = 'jwt_' . base64_encode($user['id'] . ':' . $user['email'] . ':' . time());
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,
+            'user' => collect($user)->except('password')->toArray(),
             'token' => $token,
         ]);
-        */
     }
 
     public function logout()

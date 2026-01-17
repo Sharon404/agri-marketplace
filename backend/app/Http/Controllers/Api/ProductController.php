@@ -12,7 +12,8 @@ class ProductController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth:api');
+        // Only require auth for write operations (store, update, destroy)
+        $this->middleware('auth:api')->only(['store', 'update', 'destroy']);
         $this->middleware('role:admin')->only(['store', 'update', 'destroy']);
     }
 
@@ -21,23 +22,43 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Product::query();
-
-        // Filtering
-        if ($request->has('category')) {
-            $query->where('category', $request->category);
+        // Read products from JSON file
+        $productsFile = base_path('storage/app/products.json');
+        $products = [];
+        
+        if (file_exists($productsFile)) {
+            $jsonContent = file_get_contents($productsFile);
+            if ($jsonContent) {
+                $data = json_decode($jsonContent, true);
+                $products = $data['products'] ?? [];
+            }
         }
 
+        // Apply search filter if provided
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $search = strtolower($request->search);
+            $products = array_filter($products, function ($product) use ($search) {
+                return stripos($product['name'], $search) !== false || 
+                       stripos($product['category'], $search) !== false;
+            });
         }
 
-        // Sorting
-        $sortBy = $request->get('sort_by', 'name');
-        $sortOrder = $request->get('sort_order', 'asc');
-        $query->orderBy($sortBy, $sortOrder);
+        // Apply category filter if provided
+        if ($request->has('category')) {
+            $category = $request->category;
+            $products = array_filter($products, function ($product) use ($category) {
+                return $product['category'] === $category;
+            });
+        }
 
-        return ProductResource::collection($query->paginate(20));
+        return response()->json([
+            'data' => array_values($products),
+            'meta' => [
+                'total' => count($products),
+                'per_page' => 20,
+                'current_page' => 1,
+            ]
+        ]);
     }
 
     /**
