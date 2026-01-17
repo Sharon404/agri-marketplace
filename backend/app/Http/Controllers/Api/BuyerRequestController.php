@@ -22,20 +22,13 @@ class BuyerRequestController extends Controller
      */
     public function index(Request $request)
     {
-        // Load requests from JSON file
-        $requestsFile = base_path('storage/app/buyer_requests.json');
-        $requestsData = [];
-        if (file_exists($requestsFile)) {
-            $jsonContent = file_get_contents($requestsFile);
-            if ($jsonContent) {
-                $requestsData = json_decode($jsonContent, true);
-            }
-        }
+        // Get requests from database with product relation
+        $requests = BuyerRequest::with('product')->where('is_active', true)->get();
 
         return response()->json([
-            'data' => $requestsData['requests'] ?? [],
+            'data' => $requests,
             'meta' => [
-                'total' => count($requestsData['requests'] ?? []),
+                'total' => count($requests),
                 'per_page' => 20,
                 'current_page' => 1,
             ]
@@ -48,7 +41,7 @@ class BuyerRequestController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|integer',
+            'product_id' => 'required|integer|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
             'target_price' => 'nullable|numeric|min:0.01',
             'delivery_location' => 'required|string|max:255',
@@ -60,52 +53,47 @@ class BuyerRequestController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Load requests from JSON file
-        $requestsFile = base_path('storage/app/buyer_requests.json');
-        $requestsData = [];
-        if (file_exists($requestsFile)) {
-            $jsonContent = file_get_contents($requestsFile);
-            if ($jsonContent) {
-                $requestsData = json_decode($jsonContent, true);
-            }
+        // Extract user ID from JWT token in Authorization header
+        $buyerId = $this->getUserIdFromToken($request);
+        if (!$buyerId) {
+            // Fallback to buyer_id from request if provided
+            $buyerId = $request->input('buyer_id', 2);
         }
 
-        // Get product name from products.json
-        $productName = 'Product';
-        $productsFile = base_path('storage/app/products.json');
-        if (file_exists($productsFile)) {
-            $jsonContent = file_get_contents($productsFile);
-            if ($jsonContent) {
-                $productsData = json_decode($jsonContent, true);
-                foreach ($productsData['products'] ?? [] as $product) {
-                    if ($product['id'] === (int)$request->product_id) {
-                        $productName = $product['name'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Create request
-        $newId = (count($requestsData['requests'] ?? []) + 1);
-        $buyerRequest = [
-            'id' => $newId,
-            'buyer_id' => 2,
-            'product_id' => (int)$request->product_id,
-            'product' => ['id' => (int)$request->product_id, 'name' => $productName],
-            'quantity' => (float)$request->quantity,
-            'target_price' => $request->target_price ? (float)$request->target_price : null,
+        // Create request in database
+        $buyerRequest = BuyerRequest::create([
+            'buyer_id' => $buyerId,
+            'product_id' => $request->product_id,
+            'quantity' => $request->quantity,
+            'target_price' => $request->target_price,
             'delivery_location' => $request->delivery_location,
             'urgency' => $request->urgency,
             'description' => $request->description,
-            'created_at' => now()->toIso8601String(),
-            'updated_at' => now()->toIso8601String(),
-        ];
+            'is_active' => true,
+        ]);
 
-        $requestsData['requests'][] = $buyerRequest;
-        file_put_contents($requestsFile, json_encode($requestsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        return response()->json($buyerRequest->load('product'), 201);
+    }
 
-        return response()->json($buyerRequest, 201);
+    /**
+     * Extract user ID from custom JWT token
+     */
+    private function getUserIdFromToken(Request $request)
+    {
+        $authHeader = $request->header('Authorization');
+        if (!$authHeader) {
+            return null;
+        }
+
+        // Format: "Bearer jwt_<base64_encoded_data>"
+        if (preg_match('/Bearer\s+jwt_(.+)$/', $authHeader, $matches)) {
+            $tokenData = base64_decode($matches[1]);
+            // Format: "user_id:email:timestamp"
+            $parts = explode(':', $tokenData);
+            return intval($parts[0]) ?? null;
+        }
+
+        return null;
     }
 
     /**

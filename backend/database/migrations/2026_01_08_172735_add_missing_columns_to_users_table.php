@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('phone')->nullable()->unique()->after('email');
-            $table->boolean('email_verified')->default(false)->after('email_verified_at');
-            $table->boolean('phone_verified')->default(false)->after('email_verified');
-            $table->enum('role', ['farmer', 'buyer', 'admin', 'agent'])->default('farmer')->after('phone_verified');
+            if (!Schema::hasColumn('users', 'phone')) {
+                $table->string('phone')->nullable()->unique()->after('email');
+            }
+            if (!Schema::hasColumn('users', 'email_verified')) {
+                $table->boolean('email_verified')->default(false)->after('email_verified_at');
+            }
+            if (!Schema::hasColumn('users', 'phone_verified')) {
+                $table->boolean('phone_verified')->default(false)->after('email_verified');
+            }
+            if (!Schema::hasColumn('users', 'role')) {
+                $table->enum('role', ['farmer', 'buyer', 'admin', 'agent'])->default('farmer')->after('phone_verified');
+            }
         });
     }
 

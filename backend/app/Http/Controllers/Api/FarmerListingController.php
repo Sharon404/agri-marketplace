@@ -12,7 +12,7 @@ class FarmerListingController extends Controller
 {
     public function __construct()
     {
-        // Auth middleware disabled for mock mode
+        // Auth middleware disabled for mock mode - will be re-enabled when JWT is ready
         // $this->middleware('auth:api');
         // $this->middleware('role:farmer')->only(['store', 'update', 'destroy']);
     }
@@ -22,20 +22,13 @@ class FarmerListingController extends Controller
      */
     public function index(Request $request)
     {
-        // Load listings from JSON file
-        $listingsFile = base_path('storage/app/farmer_listings.json');
-        $listingsData = [];
-        if (file_exists($listingsFile)) {
-            $jsonContent = file_get_contents($listingsFile);
-            if ($jsonContent) {
-                $listingsData = json_decode($jsonContent, true);
-            }
-        }
+        // Get listings from database with product relation
+        $listings = FarmerListing::with('product')->where('is_active', true)->get();
 
         return response()->json([
-            'data' => $listingsData['listings'] ?? [],
+            'data' => $listings,
             'meta' => [
-                'total' => count($listingsData['listings'] ?? []),
+                'total' => count($listings),
                 'per_page' => 20,
                 'current_page' => 1,
             ]
@@ -48,7 +41,7 @@ class FarmerListingController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'product_id' => 'required|integer',
+            'product_id' => 'required|integer|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
             'unit_price' => 'required|numeric|min:0.01',
             'location' => 'required|string|max:255',
@@ -60,52 +53,47 @@ class FarmerListingController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Load listings from JSON file
-        $listingsFile = base_path('storage/app/farmer_listings.json');
-        $listingsData = [];
-        if (file_exists($listingsFile)) {
-            $jsonContent = file_get_contents($listingsFile);
-            if ($jsonContent) {
-                $listingsData = json_decode($jsonContent, true);
-            }
+        // Extract user ID from JWT token in Authorization header
+        $farmerId = $this->getUserIdFromToken($request);
+        if (!$farmerId) {
+            // Fallback to farmer_id from request if provided
+            $farmerId = $request->input('farmer_id', 1);
         }
 
-        // Get product name from products.json
-        $productName = 'Product';
-        $productsFile = base_path('storage/app/products.json');
-        if (file_exists($productsFile)) {
-            $jsonContent = file_get_contents($productsFile);
-            if ($jsonContent) {
-                $productsData = json_decode($jsonContent, true);
-                foreach ($productsData['products'] ?? [] as $product) {
-                    if ($product['id'] === (int)$request->product_id) {
-                        $productName = $product['name'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Create listing
-        $newId = (count($listingsData['listings'] ?? []) + 1);
-        $listing = [
-            'id' => $newId,
-            'farmer_id' => 1,
-            'product_id' => (int)$request->product_id,
-            'product' => ['id' => (int)$request->product_id, 'name' => $productName],
-            'quantity' => (float)$request->quantity,
-            'unit_price' => (float)$request->unit_price,
+        // Create listing in database
+        $listing = FarmerListing::create([
+            'farmer_id' => $farmerId,
+            'product_id' => $request->product_id,
+            'quantity' => $request->quantity,
+            'unit_price' => $request->unit_price,
             'location' => $request->location,
             'availability_date' => $request->availability_date,
             'description' => $request->description,
-            'created_at' => now()->toIso8601String(),
-            'updated_at' => now()->toIso8601String(),
-        ];
+            'is_active' => true,
+        ]);
 
-        $listingsData['listings'][] = $listing;
-        file_put_contents($listingsFile, json_encode($listingsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        return response()->json($listing->load('product'), 201);
+    }
 
-        return response()->json($listing, 201);
+    /**
+     * Extract user ID from custom JWT token
+     */
+    private function getUserIdFromToken(Request $request)
+    {
+        $authHeader = $request->header('Authorization');
+        if (!$authHeader) {
+            return null;
+        }
+
+        // Format: "Bearer jwt_<base64_encoded_data>"
+        if (preg_match('/Bearer\s+jwt_(.+)$/', $authHeader, $matches)) {
+            $tokenData = base64_decode($matches[1]);
+            // Format: "user_id:email:timestamp"
+            $parts = explode(':', $tokenData);
+            return intval($parts[0]) ?? null;
+        }
+
+        return null;
     }
 
     /**

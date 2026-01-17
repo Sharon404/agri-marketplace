@@ -22,37 +22,25 @@ class ProductController extends Controller
      */
     public function index(Request $request)
     {
-        // Read products from JSON file
-        $productsFile = base_path('storage/app/products.json');
-        $products = [];
-        
-        if (file_exists($productsFile)) {
-            $jsonContent = file_get_contents($productsFile);
-            if ($jsonContent) {
-                $data = json_decode($jsonContent, true);
-                $products = $data['products'] ?? [];
-            }
-        }
+        // Get products from database
+        $query = Product::query();
 
         // Apply search filter if provided
         if ($request->has('search')) {
-            $search = strtolower($request->search);
-            $products = array_filter($products, function ($product) use ($search) {
-                return stripos($product['name'], $search) !== false || 
-                       stripos($product['category'], $search) !== false;
-            });
+            $search = $request->search;
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('category', 'like', "%{$search}%");
         }
 
         // Apply category filter if provided
         if ($request->has('category')) {
-            $category = $request->category;
-            $products = array_filter($products, function ($product) use ($category) {
-                return $product['category'] === $category;
-            });
+            $query->where('category', $request->category);
         }
 
+        $products = $query->get();
+
         return response()->json([
-            'data' => array_values($products),
+            'data' => $products,
             'meta' => [
                 'total' => count($products),
                 'per_page' => 20,

@@ -16,8 +16,8 @@ class AuthController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'phone' => 'nullable|string|max:20',
+            'email' => 'required|string|email|max:255|unique:users',
+            'phone' => 'nullable|string|max:20|unique:users',
             'password' => 'required|string|min:6',
             'role' => 'required|in:farmer,buyer,admin',
         ]);
@@ -26,27 +26,8 @@ class AuthController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Load users from JSON file
-        $usersFile = base_path('storage/app/users.json');
-        $usersData = [];
-        if (file_exists($usersFile)) {
-            $jsonContent = file_get_contents($usersFile);
-            if ($jsonContent) {
-                $usersData = json_decode($jsonContent, true);
-            }
-        }
-
-        // Check if user already exists
-        foreach ($usersData['users'] ?? [] as $existingUser) {
-            if ($existingUser['email'] === $request->email) {
-                return response()->json(['error' => 'Email already exists'], 422);
-            }
-        }
-
-        // Create new user
-        $userId = count($usersData['users'] ?? []) + 1;
-        $user = [
-            'id' => $userId,
+        // Create user in database
+        $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'phone' => $request->phone,
@@ -54,61 +35,38 @@ class AuthController extends Controller
             'role' => $request->role,
             'email_verified' => true,
             'phone_verified' => false,
-            'created_at' => now()->toIso8601String(),
-            'updated_at' => now()->toIso8601String(),
-        ];
-
-        $usersData['users'][] = $user;
-
-        // Save to JSON file
-        file_put_contents($usersFile, json_encode($usersData, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+        ]);
 
         // Generate token
-        $token = 'jwt_' . base64_encode($user['id'] . ':' . $user['email'] . ':' . time());
+        $token = 'jwt_' . base64_encode($user->id . ':' . $user->email . ':' . time());
 
         return response()->json([
             'message' => 'Registration successful',
-            'user' => collect($user)->except('password')->toArray(),
+            'user' => $user->makeHidden('password')->toArray(),
             'token' => $token,
         ], 201);
     }
 
     public function login(Request $request)
     {
-        // Load users from JSON file
-        $usersFile = base_path('storage/app/users.json');
-        $usersData = [];
-        if (file_exists($usersFile)) {
-            $jsonContent = file_get_contents($usersFile);
-            if ($jsonContent) {
-                $usersData = json_decode($jsonContent, true);
-            }
-        }
-
         // Find user by email
-        $user = null;
-        foreach ($usersData['users'] ?? [] as $existingUser) {
-            if ($existingUser['email'] === $request->email) {
-                $user = $existingUser;
-                break;
-            }
-        }
+        $user = User::where('email', $request->email)->first();
 
         if (!$user) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
         // Verify password
-        if (!Hash::check($request->password, $user['password'])) {
+        if (!Hash::check($request->password, $user->password)) {
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
         // Generate token
-        $token = 'jwt_' . base64_encode($user['id'] . ':' . $user['email'] . ':' . time());
+        $token = 'jwt_' . base64_encode($user->id . ':' . $user->email . ':' . time());
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => collect($user)->except('password')->toArray(),
+            'user' => $user->makeHidden('password')->toArray(),
             'token' => $token,
         ]);
     }
