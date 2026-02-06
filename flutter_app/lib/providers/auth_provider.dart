@@ -31,10 +31,19 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.login(email, password);
 
-      if (response.containsKey('token')) {
-        _token = response['token'];
+      print('=== LOGIN RESPONSE ===');
+      print('Full response: $response');
+      print('User key exists: ${response.containsKey('user')}');
+      print('Access token key exists: ${response.containsKey('access_token')}');
+      
+      // Backend returns 'access_token' from JWT auth
+      if (response.containsKey('access_token') || response.containsKey('token')) {
+        _token = response['access_token'] ?? response['token'];
         _user = response['user'];
         _isAuthenticated = true;
+        
+        print('User object: $_user');
+        print('User role: ${_user?['role']}');
 
         // Save to persistent storage
         final prefs = await SharedPreferences.getInstance();
@@ -46,6 +55,7 @@ class AuthProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
+      print('Login error: $e');
       return false;
     }
   }
@@ -54,8 +64,9 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.register(name, email, phone, password, role);
 
-      if (response.containsKey('token')) {
-        _token = response['token'];
+      // Backend returns 'access_token' from JWT auth
+      if (response.containsKey('access_token') || response.containsKey('token')) {
+        _token = response['access_token'] ?? response['token'];
         _user = response['user'];
         _isAuthenticated = true;
 

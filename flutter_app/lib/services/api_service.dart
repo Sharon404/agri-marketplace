@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // For web: use 127.0.0.1 instead of localhost to ensure it resolves correctly
-  static const String baseUrl = 'http://127.0.0.1:8000/api';
+  // For web: use localhost for better compatibility in browser context
+  static const String baseUrl = 'http://localhost:8000/api';
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {

@@ -63,7 +63,38 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    final role = authProvider.user?['role'];
+    final userData = authProvider.user;
+    final role = userData?['role'] as String?;
+    
+    // Debug logging
+    print('=== HOME SCREEN DEBUG ===');
+    print('User data: $userData');
+    print('Role: $role');
+    print('Role is null: ${role == null}');
+
+    if (role == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('User role is missing!'),
+              const SizedBox(height: 16),
+              Text('User data: $userData'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () async {
+                  await authProvider.logout();
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+                child: const Text('Go Back to Login'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     if (role == 'admin') {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -97,8 +128,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (role == 'farmer') ..._buildFarmerDashboard(),
                   if (role == 'buyer') ..._buildBuyerDashboard(),
                   if (role != 'farmer' && role != 'buyer' && role != 'admin') ...[
-                    const Center(
-                      child: Text('Invalid user role. Please contact support.'),
+                    Center(
+                      child: Column(
+                        children: [
+                          const Text('Invalid user role. Please contact support.'),
+                          const SizedBox(height: 16),
+                          Text('Role received: "$role"'),
+                        ],
+                      ),
                     ),
                   ],
                 ],
