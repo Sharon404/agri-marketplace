@@ -43,7 +43,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Registration successful',
             'user' => $user->makeHidden('password')->toArray(),
-            'token' => $token,
+            'access_token' => $token,
+            'token_type' => 'bearer',
         ], 201);
     }
 
@@ -67,7 +68,8 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Login successful',
             'user' => $user->makeHidden('password')->toArray(),
-            'token' => $token,
+            'access_token' => $token,
+            'token_type' => 'bearer',
         ]);
     }
 
