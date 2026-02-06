@@ -48,8 +48,8 @@ class AnalyticsController extends Controller
             'market_highlights' => $marketHighlights,
         ]);
         */
+    }
 
-    
     public function buyerAnalytics(Request $request)
     {
         $user = auth()->user();
@@ -91,6 +91,7 @@ class AnalyticsController extends Controller
             'supply_highlights' => $supplyHighlights,
         ]);
         */
+    }
 
     private function getMarketHighlights()
     {
@@ -186,9 +187,10 @@ class AnalyticsController extends Controller
             }
 
             // Get delivery coverage - use sample data if no real data
-            $coverage = $supplyData === collect($sampleProducts) ?
-                'Nairobi, Kiambu, Machakos' :
-                FarmerListing::select('location')
+            if ($supplyData === collect($sampleProducts)) {
+                $coverage = 'Nairobi, Kiambu, Machakos';
+            } else {
+                $coverage = FarmerListing::select('location')
                     ->where('is_active', true)
                     ->distinct()
                     ->get()
@@ -202,6 +204,7 @@ class AnalyticsController extends Controller
                     ->unique()
                     ->take(4)
                     ->implode(', ');
+            }
 
             $highlights[] = [
                 'product' => $supply['name'] ?? $supply->name,
@@ -281,6 +284,7 @@ class AnalyticsController extends Controller
             'total_products' => $totalProducts,
         ]);
         */
+    }
 
     public function adminDeals(Request $request)
     {
@@ -355,4 +359,5 @@ class AnalyticsController extends Controller
             'requests' => $requests,
         ]);
         */
+    }
 }

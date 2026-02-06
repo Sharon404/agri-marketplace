@@ -11,21 +11,53 @@ class Deal extends Model
     use HasFactory;
 
     protected $fillable = [
+        'farmer_id',
+        'buyer_id',
+        'product_id',
         'farmer_listing_id',
         'buyer_request_id',
-        'broker_id', // admin/agent user
-        'agreed_quantity',
+        'quantity',
         'agreed_price',
-        'status', // pending, negotiated, accepted, logistics_assigned, delivered, completed, cancelled
-        'notes',
+        'total_amount',
+        'status',
+        'payment_status',
+        'delivery_location',
+        'delivery_date',
+        'delivery_notes',
+        'farmer_notes',
+        'buyer_notes',
+        'accepted_at',
+        'delivered_at',
+        'completed_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'agreed_quantity' => 'decimal:2',
+            'quantity' => 'decimal:2',
             'agreed_price' => 'decimal:2',
+            'total_amount' => 'decimal:2',
+            'delivery_date' => 'date',
+            'accepted_at' => 'datetime',
+            'delivered_at' => 'datetime',
+            'completed_at' => 'datetime',
         ];
+    }
+
+    // Relationships
+    public function farmer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'farmer_id');
+    }
+
+    public function buyer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function farmerListing(): BelongsTo
@@ -38,14 +70,47 @@ class Deal extends Model
         return $this->belongsTo(BuyerRequest::class);
     }
 
-    public function broker(): BelongsTo
+    public function reviews()
     {
-        return $this->belongsTo(User::class, 'broker_id');
+        return $this->hasMany(Review::class);
+    }
+
+    public function conversation()
+    {
+        return $this->hasOne(Conversation::class);
     }
 
     public function transactions()
     {
         return $this->hasMany(Transaction::class);
+    }
+
+    // Scopes
+    public function scopePending($query)
+    {
+        return $query->where('status', 'pending');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['accepted', 'in_transit', 'delivered']);
+    }
+
+    public function scopeCompleted($query)
+    {
+        return $query->where('status', 'completed');
+    }
+
+    // Helper methods
+    public function canBeAcceptedBy(User $user)
+    {
+        return $this->status === 'pending' && 
+               ($this->farmer_id === $user->id || $this->buyer_id === $user->id);
+    }
+
+    public function canBeUpdatedBy(User $user)
+    {
+        return $this->farmer_id === $user->id || $this->buyer_id === $user->id;
     }
 
     public function logisticsJobs()
