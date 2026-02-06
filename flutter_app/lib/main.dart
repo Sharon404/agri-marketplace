@@ -25,7 +25,7 @@ void main() async {
 }
 
 class AgriMarketplaceApp extends StatelessWidget {
-  const AgriMarketplaceApp({Key? key}) : super(key: key);
+  const AgriMarketplaceApp({super.key});
 
   @override
   Widget build(BuildContext context) {

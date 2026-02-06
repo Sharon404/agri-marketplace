@@ -5,7 +5,7 @@ import '../services/api_service.dart';
 import 'admin_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   _HomeScreenState createState() => _HomeScreenState();
@@ -232,13 +232,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.agriculture, color: Colors.white, size: 32),
-                const SizedBox(width: 12),
+                Icon(Icons.agriculture, color: Colors.white, size: 32),
+                SizedBox(width: 12),
                 Text(
                   'Grow Your Business!',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -365,11 +365,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.rocket_launch, color: Colors.white, size: 28),
-                const SizedBox(width: 12),
-                const Text(
+                Icon(Icons.rocket_launch, color: Colors.white, size: 28),
+                SizedBox(width: 12),
+                Text(
                   'Ready to sell?',
                   style: TextStyle(
                     fontSize: 20,
@@ -662,13 +662,13 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.celebration, color: Colors.white, size: 32),
-                const SizedBox(width: 12),
+                Icon(Icons.celebration, color: Colors.white, size: 32),
+                SizedBox(width: 12),
                 Text(
                   'Welcome to Agri Marketplace!',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
@@ -795,11 +795,11 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            const Row(
               children: [
-                const Icon(Icons.lightbulb, color: Colors.white, size: 28),
-                const SizedBox(width: 12),
-                const Text(
+                Icon(Icons.lightbulb, color: Colors.white, size: 28),
+                SizedBox(width: 12),
+                Text(
                   'Ready to get started?',
                   style: TextStyle(
                     fontSize: 20,

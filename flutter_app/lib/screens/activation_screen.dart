@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 
 class ActivationScreen extends StatefulWidget {
-  const ActivationScreen({Key? key}) : super(key: key);
+  const ActivationScreen({super.key});
 
   @override
   _ActivationScreenState createState() => _ActivationScreenState();
@@ -30,7 +30,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
       final activationUrl = prefs.getString('activation_url');
 
       // Add a small delay to ensure data is loaded
-      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 100));
 
       if (activationUrl == null || activationUrl.isEmpty) {
         setState(() {
@@ -56,46 +56,46 @@ class _ActivationScreenState extends State<ActivationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Account Activation'),
+        title: const Text('Account Activation'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            Text(
+            const Text(
               'Your account has been created successfully!',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 24),
+            const Text(
               'Please click the activation link below to activate your account. You can also copy and paste it into your browser.',
               style: TextStyle(fontSize: 16),
               textAlign: TextAlign.center,
             ),
-            SizedBox(height: 24),
+            const SizedBox(height: 24),
             if (_errorMessage != null) ...[
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.error, size: 64, color: Colors.red),
-                    SizedBox(height: 16),
+                    const Icon(Icons.error, size: 64, color: Colors.red),
+                    const SizedBox(height: 16),
                     Text(
                       _errorMessage!,
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 24),
+                    const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: () => Navigator.pop(context),
-                      child: Text('Back to Registration'),
+                      child: const Text('Back to Registration'),
                     ),
                   ],
                 ),
               ),
             ] else if (_isLoading) ...[
-              Center(
+              const Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -107,21 +107,21 @@ class _ActivationScreenState extends State<ActivationScreen> {
               ),
             ] else if (_activationUrl != null) ...[
               Container(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.grey[100],
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
                   children: [
-                    Text(
+                    const Text(
                       'Activation Link:',
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     SelectableText(
                       _activationUrl!,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: Colors.blue,
                         decoration: TextDecoration.underline,
                       ),
@@ -129,28 +129,28 @@ class _ActivationScreenState extends State<ActivationScreen> {
                   ],
                 ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _openActivationLink,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50),
+                ),
                 child: _isLoading
                     ? CircularProgressIndicator()
                     : Text('Open Activation Link'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: Size(double.infinity, 50),
-                ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: _isLoading ? null : () => Navigator.pushReplacementNamed(context, '/login'),
-                child: Text('Go to Login'),
                 style: ElevatedButton.styleFrom(
-                  minimumSize: Size(double.infinity, 50),
+                  minimumSize: const Size(double.infinity, 50),
                 ),
+                child: Text('Go to Login'),
               ),
             ] else ...[
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading activation link...'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              const Text('Loading activation link...'),
             ],
           ],
         ),
@@ -165,7 +165,7 @@ class _ActivationScreenState extends State<ActivationScreen> {
         await launchUrl(url);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open activation link')),
+          const SnackBar(content: Text('Could not open activation link')),
         );
       }
     }

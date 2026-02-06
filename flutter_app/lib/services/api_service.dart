@@ -140,24 +140,34 @@ class ApiService {
   }
 
   Future<List<dynamic>> getProducts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    try {
+      // Products endpoint is public, but try to use token if available
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/products'),
-      headers: {
+      final headers = {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['data'];
-    } else {
-      throw Exception('Failed to load products');
+      final response = await http.get(
+        Uri.parse('$baseUrl/products'),
+        headers: headers,
+      ).timeout(const Duration(seconds: 10));
+
+      print('Products response status: ${response.statusCode}');
+      print('Products response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['data'] ?? [];
+      } else {
+        throw Exception('Failed to load products: ${response.statusCode}');
+      }
+    } on TimeoutException {
+      throw Exception('Products timeout: Backend server not responding');
+    } catch (e) {
+      throw Exception('Products error: ${e.toString()}');
     }
   }
 

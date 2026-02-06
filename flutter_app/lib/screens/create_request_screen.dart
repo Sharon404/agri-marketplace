@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
 class CreateRequestScreen extends StatefulWidget {
-  const CreateRequestScreen({Key? key}) : super(key: key);
+  const CreateRequestScreen({super.key});
 
   @override
   _CreateRequestScreenState createState() => _CreateRequestScreenState();
@@ -64,7 +64,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                   children: [
                     if (_products.isNotEmpty)
                       DropdownButtonFormField<int>(
-                        value: _selectedProductId,
+                        initialValue: _selectedProductId,
                         decoration: const InputDecoration(
                           labelText: 'Select Product Needed',
                           border: OutlineInputBorder(),
@@ -118,7 +118,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
-                      value: _urgency,
+                      initialValue: _urgency,
                       decoration: const InputDecoration(
                         labelText: 'Urgency',
                         border: OutlineInputBorder(),

@@ -4,7 +4,7 @@ import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 
 class CreateListingScreen extends StatefulWidget {
-  const CreateListingScreen({Key? key}) : super(key: key);
+  const CreateListingScreen({super.key});
 
   @override
   _CreateListingScreenState createState() => _CreateListingScreenState();
@@ -65,7 +65,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   children: [
                     if (_products.isNotEmpty)
                       DropdownButtonFormField<int>(
-                        value: _selectedProductId,
+                        initialValue: _selectedProductId,
                         decoration: const InputDecoration(
                           labelText: 'Select Product',
                           border: OutlineInputBorder(),
