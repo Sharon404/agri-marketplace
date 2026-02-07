@@ -304,38 +304,12 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        print('Farmer analytics error: ${response.statusCode} - ${response.body.substring(0, 100)}');
-        // Return mock data if endpoint fails
-        return _getMockFarmerAnalytics();
+        throw Exception('Farmer analytics failed: ${response.statusCode}');
       }
     } catch (e) {
       print('Farmer analytics error: $e');
-      // Return mock data on error
-      return _getMockFarmerAnalytics();
+      rethrow;
     }
-  }
-
-  Map<String, dynamic> _getMockFarmerAnalytics() {
-    return {
-      'market_highlights': [
-        {
-          'product': 'Tomatoes',
-          'demand_level': 'High',
-          'buyers_requesting': 12,
-          'weekly_demand': '200-300 kg',
-          'active_suppliers': 8,
-          'demand_region': 'Nairobi',
-        },
-        {
-          'product': 'Potatoes',
-          'demand_level': 'Medium',
-          'buyers_requesting': 8,
-          'weekly_demand': '150-200 kg',
-          'active_suppliers': 5,
-          'demand_region': 'Kiambu',
-        },
-      ],
-    };
   }
 
   Future<Map<String, dynamic>> getBuyerAnalytics() async {
@@ -358,42 +332,11 @@ class ApiService {
       if (response.statusCode == 200) {
         return jsonDecode(response.body);
       } else {
-        print('Buyer analytics error: ${response.statusCode} - ${response.body.substring(0, 100)}');
-        // Return mock data if endpoint fails
-        return _getMockBuyerAnalytics();
+        throw Exception('Buyer analytics failed: ${response.statusCode}');
       }
     } catch (e) {
       print('Buyer analytics error: $e');
-      // Return mock data on error
-      return _getMockBuyerAnalytics();
+      rethrow;
     }
-  }
-
-  Map<String, dynamic> _getMockBuyerAnalytics() {
-    return {
-      'supply_highlights': [
-        {
-          'product': 'Tomatoes',
-          'supply_availability': '200-300 kg',
-          'verified_farmers': 15,
-          'delivery_coverage': 'Nairobi, Kiambu, Machakos',
-          'reliability_stats': '98% on-time deliveries',
-        },
-        {
-          'product': 'Potatoes',
-          'supply_availability': '150-250 kg',
-          'verified_farmers': 12,
-          'delivery_coverage': 'Nairobi, Nakuru',
-          'reliability_stats': '95% on-time deliveries',
-        },
-        {
-          'product': 'Onions',
-          'supply_availability': '100-200 kg',
-          'verified_farmers': 10,
-          'delivery_coverage': 'Nairobi, Kiambu',
-          'reliability_stats': '97% on-time deliveries',
-        },
-      ],
-    };
   }
 }

@@ -12,9 +12,9 @@ class BuyerRequestController extends Controller
 {
     public function __construct()
     {
-        // Auth middleware disabled for mock mode
-        // $this->middleware('auth:api');
-        // $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
+        // Protect write operations with authentication
+        $this->middleware('auth:api')->only(['store', 'update', 'destroy']);
+        $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
     }
 
     /**
@@ -44,7 +44,7 @@ class BuyerRequestController extends Controller
             'product_id' => 'required|integer|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
             'target_price' => 'nullable|numeric|min:0.01',
-            'delivery_location' => 'required|string|max:255',
+            'delivery_location' => 'nullable|string|max:255', // Optional - can use buyer's county/sub_county
             'urgency' => 'required|in:low,medium,high',
             'description' => 'nullable|string|max:1000',
         ]);
@@ -60,13 +60,17 @@ class BuyerRequestController extends Controller
             $buyerId = $request->input('buyer_id', 2);
         }
 
+        // Get buyer's location if not provided
+        $buyer = User::find($buyerId);
+        $deliveryLocation = $request->delivery_location ?? ($buyer?->county ? $buyer->county . ', ' . ($buyer->sub_county ?? '') : 'TBD');
+
         // Create request in database
         $buyerRequest = BuyerRequest::create([
             'buyer_id' => $buyerId,
             'product_id' => $request->product_id,
             'quantity' => $request->quantity,
             'target_price' => $request->target_price,
-            'delivery_location' => $request->delivery_location,
+            'delivery_location' => $deliveryLocation,
             'urgency' => $request->urgency,
             'description' => $request->description,
             'is_active' => true,

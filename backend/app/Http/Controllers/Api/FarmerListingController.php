@@ -12,9 +12,9 @@ class FarmerListingController extends Controller
 {
     public function __construct()
     {
-        // Auth middleware disabled for mock mode - will be re-enabled when JWT is ready
-        // $this->middleware('auth:api');
-        // $this->middleware('role:farmer')->only(['store', 'update', 'destroy']);
+        // Protect write operations with authentication
+        $this->middleware('auth:api')->only(['store', 'update', 'destroy']);
+        $this->middleware('role:farmer')->only(['store', 'update', 'destroy']);
     }
 
     /**
@@ -44,7 +44,7 @@ class FarmerListingController extends Controller
             'product_id' => 'required|integer|exists:products,id',
             'quantity' => 'required|numeric|min:0.01',
             'unit_price' => 'required|numeric|min:0.01',
-            'location' => 'required|string|max:255',
+            'location' => 'nullable|string|max:255', // Optional - can use farmer's county/sub_county
             'availability_date' => 'required|date|after:today',
             'description' => 'nullable|string|max:1000',
         ]);
@@ -60,13 +60,17 @@ class FarmerListingController extends Controller
             $farmerId = $request->input('farmer_id', 1);
         }
 
+        // Get farmer's location if not provided
+        $farmer = User::find($farmerId);
+        $location = $request->location ?? ($farmer?->county ? $farmer->county . ', ' . ($farmer->sub_county ?? '') : 'TBD');
+
         // Create listing in database
         $listing = FarmerListing::create([
             'farmer_id' => $farmerId,
             'product_id' => $request->product_id,
             'quantity' => $request->quantity,
             'unit_price' => $request->unit_price,
-            'location' => $request->location,
+            'location' => $location,
             'availability_date' => $request->availability_date,
             'description' => $request->description,
             'is_active' => true,

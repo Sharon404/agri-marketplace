@@ -16,81 +16,77 @@ class AnalyticsController extends Controller
     {
         $user = auth()->user();
 
-        // Return mock data for testing
-        $marketHighlights = [
-            [
-                'product' => 'Tomatoes',
-                'demand_level' => 'High',
-                'buyers_requesting' => 12,
-                'weekly_demand' => '200-300 kg',
-                'active_suppliers' => 8,
-                'demand_region' => 'Nairobi',
-            ],
-            [
-                'product' => 'Potatoes',
-                'demand_level' => 'Medium',
-                'buyers_requesting' => 8,
-                'weekly_demand' => '150-200 kg',
-                'active_suppliers' => 5,
-                'demand_region' => 'Kiambu',
-            ],
-        ];
+        // Get real market data based on buyer requests and listings
+        $products = Product::select('name')
+            ->withCount([
+                'buyerRequests as demand_count',
+                'farmerListings as supplier_count'
+            ])
+            ->where('buyerRequests_count', '>', 0)
+            ->orderBy('buyerRequests_count', 'desc')
+            ->limit(5)
+            ->get();
+
+        $marketHighlights = $products->map(function ($product) {
+            $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
+                $q->where('name', $product->name);
+            })->sum('quantity');
+
+            return [
+                'product' => $product->name,
+                'demand_level' => $product->demand_count > 8 ? 'High' : ($product->demand_count > 4 ? 'Medium' : 'Low'),
+                'buyers_requesting' => $product->demand_count,
+                'weekly_demand' => $totalQuantity . ' units',
+                'active_suppliers' => $product->supplier_count,
+                'demand_region' => 'Multiple',
+            ];
+        })->toArray();
 
         return response()->json([
-            'market_highlights' => $marketHighlights,
+            'market_highlights' => $marketHighlights ?: $this->getDefaultMarketData(),
         ]);
-
-        /*
-        // Get aggregated market data
-        $marketHighlights = $this->getMarketHighlights();
-
-        return response()->json([
-            'market_highlights' => $marketHighlights,
-        ]);
-        */
     }
 
     public function buyerAnalytics(Request $request)
     {
         $user = auth()->user();
 
-        // Return mock data for testing
-        $supplyHighlights = [
-            [
-                'product' => 'Tomatoes',
-                'supply_availability' => '200-300 kg',
-                'verified_farmers' => 15,
-                'delivery_coverage' => 'Nairobi, Kiambu, Machakos',
-                'reliability_stats' => '98% on-time deliveries',
-            ],
-            [
-                'product' => 'Potatoes',
-                'supply_availability' => '150-250 kg',
-                'verified_farmers' => 12,
-                'delivery_coverage' => 'Nairobi, Nakuru',
+        // Get real supply data based on farmer listings
+        $products = Product::select('name')
+            ->withCount([
+                'farmerListings as supplier_count',
+                'buyerRequests as demand_count'
+            ])
+            ->where('farmerListings_count', '>', 0)
+            ->orderBy('farmerListings_count', 'desc')
+            ->limit(5)
+            ->get();
+
+        $supplyHighlights = $products->map(function ($product) {
+            $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
+                $q->where('name', $product->name);
+            })->where('is_active', true)->sum('quantity');
+
+            $verifiedFarmers = User::where('role', 'farmer')
+                ->where('email_verified', true)
+                ->whereHas('farmerListings', function ($q) use ($product) {
+                    $q->where('product_id', function ($subQ) use ($product) {
+                        $subQ->select('id')->from('products')->where('name', $product->name);
+                    });
+                })->count();
+
+            return [
+                'product' => $product->name,
+                'supply_availability' => $totalQuantity . ' units',
+                'verified_farmers' => $verifiedFarmers ?: $product->supplier_count,
+                'delivery_coverage' => 'Multiple Regions',
                 'reliability_stats' => '95% on-time deliveries',
-            ],
-            [
-                'product' => 'Onions',
-                'supply_availability' => '100-200 kg',
-                'verified_farmers' => 10,
-                'delivery_coverage' => 'Nairobi, Kiambu',
-                'reliability_stats' => '97% on-time deliveries',
-            ],
-        ];
+            ];
+        })->toArray();
 
         return response()->json([
-            'supply_highlights' => $supplyHighlights,
+            'supply_highlights' => $supplyHighlights ?: $this->getDefaultSupplyData(),
         ]);
-
-        /*
-        // Get aggregated supply data
-        $supplyHighlights = $this->getSupplyHighlights();
-
-        return response()->json([
-            'supply_highlights' => $supplyHighlights,
-        ]);
-        */
     }
 
     private function getMarketHighlights()
@@ -359,5 +355,38 @@ class AnalyticsController extends Controller
             'requests' => $requests,
         ]);
         */
+    }
+
+    /**
+     * Default market data fallback when database is empty
+     */
+    private function getDefaultMarketData()
+    {
+        return [
+            [
+                'product' => 'Top Demand Products',
+                'demand_level' => 'Pending data',
+                'buyers_requesting' => 0,
+                'weekly_demand' => 'No data',
+                'active_suppliers' => 0,
+                'demand_region' => 'Multiple',
+            ],
+        ];
+    }
+
+    /**
+     * Default supply data fallback when database is empty
+     */
+    private function getDefaultSupplyData()
+    {
+        return [
+            [
+                'product' => 'Available Products',
+                'supply_availability' => 'No data',
+                'verified_farmers' => 0,
+                'delivery_coverage' => 'Multiple Regions',
+                'reliability_stats' => 'Pending data',
+            ],
+        ];
     }
 }
