@@ -11,9 +11,12 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class DealsController extends Controller
 {
+    use AuthorizesRequests;
+    
     /**
      * Get all deals for the authenticated user
      */
@@ -221,14 +224,18 @@ class DealsController extends Controller
         $user = auth()->user();
         $deal = Deal::with(['farmer', 'buyer', 'product'])->findOrFail($id);
 
-        // Verify user is part of the deal
-        if ($deal->farmer_id !== $user->id && $deal->buyer_id !== $user->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        // Business logic for status transitions
-        if ($request->status === 'accepted' && $deal->status !== 'pending') {
-            return response()->json(['error' => 'Only pending deals can be accepted'], 422);
+        // Use policy authorization based on the desired status
+        try {
+            match ($request->status) {
+                'accepted' => $this->authorize('accept', $deal),
+                'cancelled' => $this->authorize('cancel', $deal),
+                'in_transit', 'delivered' => $this->authorize('markDelivered', $deal),
+                'completed' => $this->authorize('complete', $deal),
+                'disputed' => $this->authorize('update', $deal),
+                default => throw new \Exception('Invalid status'),
+            };
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['error' => 'Unauthorized: ' . $e->getMessage()], 403);
         }
 
         DB::beginTransaction();
