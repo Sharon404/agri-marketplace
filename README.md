@@ -2,6 +2,13 @@
 
 A mobile-first agricultural brokerage platform where farmers post produce listings, buyers post purchase requests, and admins act as brokers to facilitate deals with escrow payments.
 
+## 📚 Documentation
+
+- **[Managed Marketplace Architecture](./MANAGED_MARKETPLACE.md)** - Complete guide to the managed marketplace model
+- **[Phase 2 Implementation](./PHASE2_IMPLEMENTATION.md)** - Details on deal workflow and payment creation
+- **[Phase 1 Implementation](./PHASE1_IMPLEMENTATION.md)** - Initial platform setup and models
+- **[Migration Guide](./MIGRATION_GUIDE.md)** - Upgrade path from old to new systems
+
 ## Architecture
 
 - **Backend**: Laravel 12 with PHP 8.4, PostgreSQL database, JWT authentication
@@ -12,8 +19,8 @@ A mobile-first agricultural brokerage platform where farmers post produce listin
 
 ### Core Functionality
 - **User Management**: Role-based authentication (farmer/buyer/admin/agent)
-- **Marketplace**: Farmers create produce listings, buyers create purchase requests
-- **Broker Operations**: Admins match supply/demand, negotiate deals, manage escrow
+- **Managed Marketplace**: Admin-driven deal creation with buyer/farmer confirmation workflow
+- **Broker Operations**: Admins match supply/demand, create deals, manage escrow
 - **Transaction Management**: Secure payments with escrow system
 - **Logistics**: Delivery tracking and verification
 - **Dispute Resolution**: Admin-mediated conflict resolution
@@ -24,6 +31,8 @@ A mobile-first agricultural brokerage platform where farmers post produce listin
 - Real-time marketplace data
 - Audit logging for all operations
 - Mobile-first responsive design
+- Automatic payment creation and escrow management
+- Multi-stage deal confirmation workflow
 
 ## Quick Start
 

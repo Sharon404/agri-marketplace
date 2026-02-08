@@ -16,6 +16,7 @@ class Deal extends Model
         'product_id',
         'farmer_listing_id',
         'buyer_request_id',
+        'farmer_supply_id',
         'quantity',
         'agreed_price',
         'total_amount',
@@ -26,7 +27,11 @@ class Deal extends Model
         'delivery_notes',
         'farmer_notes',
         'buyer_notes',
+        'admin_notes',
+        'created_by_admin',
         'accepted_at',
+        'buyer_confirmed_at',
+        'farmer_confirmed_at',
         'delivered_at',
         'completed_at',
     ];
@@ -39,8 +44,11 @@ class Deal extends Model
             'total_amount' => 'decimal:2',
             'delivery_date' => 'date',
             'accepted_at' => 'datetime',
+            'buyer_confirmed_at' => 'datetime',
+            'farmer_confirmed_at' => 'datetime',
             'delivered_at' => 'datetime',
             'completed_at' => 'datetime',
+            'created_by_admin' => 'boolean',
         ];
     }
 
@@ -68,6 +76,21 @@ class Deal extends Model
     public function buyerRequest(): BelongsTo
     {
         return $this->belongsTo(BuyerRequest::class);
+    }
+
+    public function farmerSupply(): BelongsTo
+    {
+        return $this->belongsTo(FarmerSupply::class);
+    }
+
+    public function payment()
+    {
+        return $this->hasOne(Payment::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
     }
 
     public function reviews()

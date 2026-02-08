@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\Api\BuyerRequestController;
 use App\Http\Controllers\Api\FarmerListingController;
+use App\Http\Controllers\Api\FarmerSupplyController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\DealsController;
 use App\Http\Controllers\Api\MessagesController;
 use App\Http\Controllers\Api\ReviewsController;
+use App\Http\Controllers\Admin\DealController as AdminDealController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
 use App\Http\Controllers\EmailVerificationController;
@@ -41,9 +43,23 @@ Route::middleware('auth:api')->prefix('email')->group(function () {
     Route::post('/resend', [EmailVerificationController::class, 'resendCode']);
 });
 
-Route::apiResource('products', ProductController::class);
+// Products - public read
+Route::apiResource('products', ProductController::class, ['only' => ['index', 'show']]);
 
-// Farmer listings and buyer requests require email verification for write operations
+// Farmer Supplies - new managed marketplace model
+// Farmers submit availability, admin matches with requests
+Route::middleware(['auth:api', 'require.email.verified'])->prefix('supplies')->group(function () {
+    Route::get('/', [FarmerSupplyController::class, 'index']); // My supplies (farmer only)
+    Route::post('/', [FarmerSupplyController::class, 'store']); // Create supply (farmer only)
+    Route::get('/{id}', [FarmerSupplyController::class, 'show']); // View supply
+    Route::patch('/{id}', [FarmerSupplyController::class, 'update']); // Update supply (farmer only)
+    Route::delete('/{id}', [FarmerSupplyController::class, 'destroy']); // Delete supply (farmer only)
+});
+
+// Public view of available supplies (for buyers)
+Route::get('/supplies/available', [FarmerSupplyController::class, 'listAvailable']);
+
+// Farmer listings - deprecated in favor of farmer-supplies but kept for backward compatibility
 Route::middleware(['auth:api', 'require.email.verified'])->group(function () {
     Route::post('farmer-listings', [FarmerListingController::class, 'store']);
     Route::patch('farmer-listings/{id}', [FarmerListingController::class, 'update']);
@@ -54,7 +70,6 @@ Route::middleware(['auth:api', 'require.email.verified'])->group(function () {
     Route::delete('buyer-requests/{id}', [BuyerRequestController::class, 'destroy']);
 });
 
-// Listings and requests read operations don't require verification
 Route::get('farmer-listings', [FarmerListingController::class, 'index']);
 Route::get('farmer-listings/{id}', [FarmerListingController::class, 'show']);
 Route::get('buyer-requests', [BuyerRequestController::class, 'index']);
@@ -66,15 +81,16 @@ Route::middleware('auth:api')->group(function () {
     Route::get('/buyer/analytics', [AnalyticsController::class, 'buyerAnalytics']);
 });
 
-// Deals routes - require email verification
+// Deals routes (READ ONLY for farmers/buyers) - require email verification
+// Farmers and buyers can ONLY view and accept/reject deals
+// Deals are created by admin only
 Route::middleware(['auth:api', 'require.email.verified'])->prefix('deals')->group(function () {
-    Route::get('/', [DealsController::class, 'index']);
-    Route::get('/statistics', [DealsController::class, 'statistics']);
-    Route::get('/{id}', [DealsController::class, 'show']);
-    Route::post('/from-listing', [DealsController::class, 'createFromListing']);
-    Route::post('/from-request', [DealsController::class, 'createFromRequest']);
-    Route::patch('/{id}/status', [DealsController::class, 'updateStatus']);
-    Route::patch('/{id}/payment', [DealsController::class, 'updatePaymentStatus']);
+    Route::get('/', [DealsController::class, 'index']); // View my deals
+    Route::get('/{id}', [DealsController::class, 'show']); // View deal details
+    Route::patch('/{id}/accept', [DealsController::class, 'accept']); // Buyer/farmer accepts
+    Route::patch('/{id}/reject', [DealsController::class, 'reject']); // Buyer/farmer rejects
+    Route::get('/statistics', [DealsController::class, 'statistics']); // Deal statistics
+    // REMOVED: createFromListing, createFromRequest (peer-to-peer creation disabled)
 });
 
 // Messages routes - require email verification
@@ -95,8 +111,23 @@ Route::middleware('auth:api')->prefix('reviews')->group(function () {
     Route::delete('/{id}', [ReviewsController::class, 'destroy'])->middleware('require.email.verified');
 });
 
-// Admin routes
-Route::middleware('auth:api')->prefix('admin')->group(function () {
+// Admin routes - MANAGED MARKETPLACE
+// Only admins can create and modify deals
+Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function () {
+    // Dashboard
     Route::get('/dashboard', [AnalyticsController::class, 'adminDashboard']);
-    Route::get('/deals', [AnalyticsController::class, 'adminDeals']);
+    
+    // Deal Management (admin only)
+    Route::get('/deals', [AdminDealController::class, 'listDeals']);
+    Route::post('/deals', [AdminDealController::class, 'createDeal']); // ADMIN CREATES DEALS
+    Route::get('/deals/{id}', [AdminDealController::class, 'showDeal']);
+    Route::patch('/deals/{id}', [AdminDealController::class, 'updateDeal']);
+    Route::patch('/deals/{id}/cancel', [AdminDealController::class, 'cancelDeal']);
+    Route::patch('/deals/{id}/release-escrow', [AdminDealController::class, 'releaseEscrow']);
+    
+    // Buyer Requests (view for matching)
+    Route::get('/buyer-requests', [AdminDealController::class, 'listBuyerRequests']);
+    
+    // Farmer Supplies (view for matching)
+    Route::get('/farmer-supplies', [AdminDealController::class, 'listFarmerSupplies']);
 });

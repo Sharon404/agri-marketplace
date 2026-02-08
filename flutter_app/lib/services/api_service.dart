@@ -339,4 +339,270 @@ class ApiService {
       rethrow;
     }
   }
+
+  // PHASE 2: Managed Marketplace Deal Methods
+  
+  /// Get all deals for the authenticated user
+  Future<List<dynamic>> getDeals({String? status}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      String url = '$baseUrl/deals';
+      if (status != null && status.isNotEmpty) {
+        url += '?status=$status';
+      }
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Get deals response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        // Handle both paginated and non-paginated responses
+        if (data is Map && data.containsKey('data')) {
+          return data['data'] ?? [];
+        }
+        return data is List ? data : [];
+      } else {
+        throw Exception('Failed to load deals: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get deals error: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a specific deal by ID
+  Future<Map<String, dynamic>> getDeal(int dealId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/deals/$dealId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Get deal response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load deal: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get deal error: $e');
+      rethrow;
+    }
+  }
+
+  /// Accept a deal (for buyer or farmer)
+  /// Buyer accepts when status = pending_buyer_confirmation
+  /// Farmer accepts when status = pending_farmer_confirmation
+  Future<Map<String, dynamic>> acceptDeal(int dealId, {String? notes}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final body = {
+        if (notes != null && notes.isNotEmpty) 'notes': notes,
+      };
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/deals/$dealId/accept'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      print('Accept deal response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorBody = jsonDecode(response.body);
+        throw Exception('Failed to accept deal: ${errorBody['error'] ?? response.statusCode}');
+      }
+    } catch (e) {
+      print('Accept deal error: $e');
+      rethrow;
+    }
+  }
+
+  /// Reject a deal (for buyer or farmer)
+  /// Can only reject in confirmation phases: pending_buyer_confirmation, pending_farmer_confirmation
+  Future<Map<String, dynamic>> rejectDeal(int dealId, {String? reason}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final body = {
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      };
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/deals/$dealId/reject'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 10));
+
+      print('Reject deal response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        final errorBody = jsonDecode(response.body);
+        throw Exception('Failed to reject deal: ${errorBody['error'] ?? response.statusCode}');
+      }
+    } catch (e) {
+      print('Reject deal error: $e');
+      rethrow;
+    }
+  }
+
+  /// Get deal statistics for the authenticated user
+  Future<Map<String, dynamic>> getDealStatistics() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/deals/statistics'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Deal statistics response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception('Failed to load deal statistics: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Deal statistics error: $e');
+      rethrow;
+    }
+  }
+
+  /// Get farmer supplies (available for admin matching)
+  Future<List<dynamic>> getFarmerSupplies({Map<String, String>? filters}) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
+      final url = queryParams.isNotEmpty ? '$baseUrl/supplies?$queryParams' : '$baseUrl/supplies';
+
+      final response = await http.get(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Get farmer supplies response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data.containsKey('data')) {
+          return data['data'] ?? [];
+        }
+        return data is List ? data : [];
+      } else {
+        throw Exception('Failed to load farmer supplies: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get farmer supplies error: $e');
+      rethrow;
+    }
+  }
+
+  /// Create a farmer supply (farmers submit availability)
+  Future<Map<String, dynamic>> createFarmerSupply(Map<String, dynamic> supplyData) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/supplies'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(supplyData),
+      ).timeout(const Duration(seconds: 10));
+
+      print('Create farmer supply response status: ${response.statusCode}');
+
+      if (response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        final errorBody = jsonDecode(response.body);
+        throw Exception('Failed to create supply: ${errorBody['message'] ?? response.statusCode}');
+      }
+    } catch (e) {
+      print('Create farmer supply error: $e');
+      rethrow;
+    }
+  }
+
+  /// Get available supplies (public endpoint)
+  Future<List<dynamic>> getAvailableSupplies() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/supplies/available'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Get available supplies response status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map && data.containsKey('data')) {
+          return data['data'] ?? [];
+        }
+        return data is List ? data : [];
+      } else {
+        throw Exception('Failed to load available supplies: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get available supplies error: $e');
+      rethrow;
+    }
+  }
 }

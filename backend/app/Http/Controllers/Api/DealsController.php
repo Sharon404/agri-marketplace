@@ -4,8 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Deal;
-use App\Models\FarmerListing;
-use App\Models\BuyerRequest;
+use App\Models\Payment;
 use App\Models\Notification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -19,13 +18,16 @@ class DealsController extends Controller
     
     /**
      * Get all deals for the authenticated user
+     * 
+     * MANAGED MARKETPLACE: Users can only view deals created by admin.
+     * Farmers can view deals they're involved in. Buyers can view deals they're involved in.
      */
     public function index(Request $request)
     {
         $user = auth()->user();
         $status = $request->query('status');
 
-        $query = Deal::with(['farmer', 'buyer', 'product', 'farmerListing', 'buyerRequest'])
+        $query = Deal::with(['farmer', 'buyer', 'product', 'farmerSupply', 'payment'])
             ->where(function ($q) use ($user) {
                 $q->where('farmer_id', $user->id)
                   ->orWhere('buyer_id', $user->id);
@@ -46,7 +48,7 @@ class DealsController extends Controller
     public function show($id)
     {
         $user = auth()->user();
-        $deal = Deal::with(['farmer', 'buyer', 'product', 'farmerListing', 'buyerRequest', 'reviews'])
+        $deal = Deal::with(['farmer', 'buyer', 'product', 'farmerSupply', 'payment', 'reviews'])
             ->findOrFail($id);
 
         // Verify user is part of the deal
@@ -58,15 +60,18 @@ class DealsController extends Controller
     }
 
     /**
-     * Buyer creates a deal from a farmer listing
+     * Buyer or Farmer accepts a deal created by admin
+     * 
+     * MANAGED MARKETPLACE: Only the relevant party can accept.
+     * - Buyer can accept when status = pending_buyer_confirmation
+     * - Farmer can accept when status = pending_farmer_confirmation
+     * 
+     * When both parties have confirmed, deal moves to 'both_confirmed'
+     * and Payment record is automatically created.
      */
-    public function createFromListing(Request $request)
+    public function accept(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'farmer_listing_id' => 'required|exists:farmer_listings,id',
-            'quantity' => 'required|numeric|min:0.01',
-            'delivery_location' => 'required|string|max:255',
-            'delivery_date' => 'nullable|date|after:today',
             'notes' => 'nullable|string|max:1000',
         ]);
 
@@ -75,242 +80,130 @@ class DealsController extends Controller
         }
 
         $user = auth()->user();
-        if ($user->role !== 'buyer') {
-            return response()->json(['error' => 'Only buyers can create deals from listings'], 403);
-        }
+        $deal = Deal::with(['farmer', 'buyer', 'product', 'payment'])->findOrFail($id);
 
-        $listing = FarmerListing::with('product')->findOrFail($request->farmer_listing_id);
-        
-        if (!$listing->is_active) {
-            return response()->json(['error' => 'This listing is no longer active'], 422);
-        }
-
-        if ($request->quantity > $listing->quantity) {
-            return response()->json(['error' => 'Requested quantity exceeds available quantity'], 422);
+        // Verify user is part of the deal
+        if ($deal->farmer_id !== $user->id && $deal->buyer_id !== $user->id) {
+            return response()->json(['error' => 'Unauthorized - not part of this deal'], 403);
         }
 
         DB::beginTransaction();
         try {
-            $deal = Deal::create([
-                'farmer_id' => $listing->user_id,
-                'buyer_id' => $user->id,
-                'product_id' => $listing->product_id,
-                'farmer_listing_id' => $listing->id,
-                'quantity' => $request->quantity,
-                'agreed_price' => $listing->price,
-                'total_amount' => $listing->price * $request->quantity,
-                'delivery_location' => $request->delivery_location,
-                'delivery_date' => $request->delivery_date,
-                'buyer_notes' => $request->notes,
-                'status' => 'pending',
-                'payment_status' => 'unpaid',
-            ]);
+            $isBuyer = $user->id === $deal->buyer_id;
+            $isFarmer = $user->id === $deal->farmer_id;
 
-            // Create notification for farmer
-            Notification::create([
-                'user_id' => $listing->user_id,
-                'type' => 'deal_request',
-                'title' => 'New Deal Request',
-                'message' => "{$user->name} wants to buy {$request->quantity} {$listing->unit} of your {$listing->product->name}",
-                'priority' => 'high',
-                'action_url' => "/deals/{$deal->id}",
-            ]);
-
-            // Increment inquiries count
-            $listing->increment('inquiries_count');
-
-            DB::commit();
-            
-            return response()->json([
-                'message' => 'Deal request sent successfully',
-                'deal' => $deal->load(['farmer', 'buyer', 'product', 'farmerListing']),
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Failed to create deal: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Farmer creates a deal offer from a buyer request
-     */
-    public function createFromRequest(Request $request)
-    {
-        $validator = Validator::make($request->all(), [
-            'buyer_request_id' => 'required|exists:buyer_requests,id',
-            'quantity' => 'required|numeric|min:0.01',
-            'offered_price' => 'required|numeric|min:0',
-            'delivery_date' => 'nullable|date|after:today',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = auth()->user();
-        if ($user->role !== 'farmer') {
-            return response()->json(['error' => 'Only farmers can offer deals'], 403);
-        }
-
-        $buyerRequest = BuyerRequest::with('product')->findOrFail($request->buyer_request_id);
-        
-        if (!$buyerRequest->is_active) {
-            return response()->json(['error' => 'This request is no longer active'], 422);
-        }
-
-        if ($request->quantity > $buyerRequest->quantity) {
-            return response()->json(['error' => 'Offered quantity exceeds requested quantity'], 422);
-        }
-
-        DB::beginTransaction();
-        try {
-            $deal = Deal::create([
-                'farmer_id' => $user->id,
-                'buyer_id' => $buyerRequest->user_id,
-                'product_id' => $buyerRequest->product_id,
-                'buyer_request_id' => $buyerRequest->id,
-                'quantity' => $request->quantity,
-                'agreed_price' => $request->offered_price,
-                'total_amount' => $request->offered_price * $request->quantity,
-                'delivery_location' => $buyerRequest->location,
-                'delivery_date' => $request->delivery_date,
-                'farmer_notes' => $request->notes,
-                'status' => 'pending',
-                'payment_status' => 'unpaid',
-            ]);
-
-            // Create notification for buyer
-            Notification::create([
-                'user_id' => $buyerRequest->user_id,
-                'type' => 'deal_offer',
-                'title' => 'New Deal Offer',
-                'message' => "{$user->name} offered {$request->quantity} {$buyerRequest->unit} of {$buyerRequest->product->name} at KES {$request->offered_price}/{$buyerRequest->unit}",
-                'priority' => 'high',
-                'action_url' => "/deals/{$deal->id}",
-            ]);
-
-            // Increment offers received
-            $buyerRequest->increment('offers_received');
-
-            DB::commit();
-            
-            return response()->json([
-                'message' => 'Deal offer sent successfully',
-                'deal' => $deal->load(['farmer', 'buyer', 'product', 'buyerRequest']),
-            ], 201);
-
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return response()->json(['error' => 'Failed to create deal: ' . $e->getMessage()], 500);
-        }
-    }
-
-    /**
-     * Update deal status (accept, cancel, mark delivered, etc.)
-     */
-    public function updateStatus(Request $request, $id)
-    {
-        $validator = Validator::make($request->all(), [
-            'status' => 'required|in:accepted,cancelled,in_transit,delivered,completed,disputed',
-            'notes' => 'nullable|string|max:1000',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
-
-        $user = auth()->user();
-        $deal = Deal::with(['farmer', 'buyer', 'product'])->findOrFail($id);
-
-        // Use policy authorization based on the desired status
-        try {
-            match ($request->status) {
-                'accepted' => $this->authorize('accept', $deal),
-                'cancelled' => $this->authorize('cancel', $deal),
-                'in_transit', 'delivered' => $this->authorize('markDelivered', $deal),
-                'completed' => $this->authorize('complete', $deal),
-                'disputed' => $this->authorize('update', $deal),
-                default => throw new \Exception('Invalid status'),
-            };
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            return response()->json(['error' => 'Unauthorized: ' . $e->getMessage()], 403);
-        }
-
-        DB::beginTransaction();
-        try {
-            $deal->status = $request->status;
-            
-            if ($request->status === 'accepted') {
-                $deal->accepted_at = now();
-                
-                // Reduce quantity from listing or mark request as fulfilled
-                if ($deal->farmer_listing_id) {
-                    $listing = $deal->farmerListing;
-                    $listing->quantity -= $deal->quantity;
-                    if ($listing->quantity <= 0) {
-                        $listing->is_active = false;
-                    }
-                    $listing->save();
-                }
-                
-            } elseif ($request->status === 'delivered') {
-                $deal->delivered_at = now();
-                
-            } elseif ($request->status === 'completed') {
-                $deal->completed_at = now();
-                
-                // Update user stats
-                User::where('id', $deal->farmer_id)->increment('successful_deals');
-                User::where('id', $deal->buyer_id)->increment('successful_deals');
-                User::where('id', $deal->farmer_id)->increment('total_deals');
-                User::where('id', $deal->buyer_id)->increment('total_deals');
+            // Validate current status and user role
+            if ($isBuyer && $deal->status !== 'pending_buyer_confirmation') {
+                return response()->json([
+                    'error' => 'Invalid deal status for buyer acceptance',
+                    'current_status' => $deal->status,
+                    'expected_status' => 'pending_buyer_confirmation'
+                ], 422);
             }
 
-            // Add notes
-            if ($request->notes) {
-                if ($user->role === 'farmer') {
-                    $deal->farmer_notes = $request->notes;
-                } else {
+            if ($isFarmer && $deal->status !== 'pending_farmer_confirmation') {
+                return response()->json([
+                    'error' => 'Invalid deal status for farmer acceptance',
+                    'current_status' => $deal->status,
+                    'expected_status' => 'pending_farmer_confirmation'
+                ], 422);
+            }
+
+            // Record confirmation
+            if ($isBuyer) {
+                $deal->buyer_confirmed_at = now();
+                
+                // Add notes if buyer provided
+                if ($request->notes) {
                     $deal->buyer_notes = $request->notes;
+                }
+
+                // Move to farmer confirmation stage if not already confirmed
+                if (!$deal->farmer_confirmed_at) {
+                    $deal->status = 'pending_farmer_confirmation';
+                } else {
+                    // Farmer already confirmed, move to both_confirmed
+                    $deal->status = 'both_confirmed';
+                }
+            } else {
+                $deal->farmer_confirmed_at = now();
+                
+                // Add notes if farmer provided
+                if ($request->notes) {
+                    $deal->farmer_notes = $request->notes;
+                }
+
+                // Move to buyer confirmation stage if not already confirmed
+                if (!$deal->buyer_confirmed_at) {
+                    $deal->status = 'pending_buyer_confirmation';
+                } else {
+                    // Buyer already confirmed, move to both_confirmed
+                    $deal->status = 'both_confirmed';
                 }
             }
 
             $deal->save();
 
-            // Notify other party
-            $otherUserId = $user->id === $deal->farmer_id ? $deal->buyer_id : $deal->farmer_id;
-            Notification::create([
-                'user_id' => $otherUserId,
-                'type' => 'deal_status_updated',
-                'title' => 'Deal Status Updated',
-                'message' => "Deal #{$deal->id} for {$deal->product->name} status changed to {$request->status}",
-                'priority' => 'normal',
-                'action_url' => "/deals/{$deal->id}",
-            ]);
+            // If both parties confirmed, create Payment record
+            if ($deal->status === 'both_confirmed' && !$deal->payment) {
+                Payment::create([
+                    'deal_id' => $deal->id,
+                    'buyer_id' => $deal->buyer_id,
+                    'amount' => $deal->total_amount,
+                    'status' => 'pending',
+                    'payment_method' => 'mpesa', // Default, can be changed by buyer
+                ]);
+
+                $deal->status = 'payment_pending';
+                $deal->save();
+
+                // Notify buyer to proceed with payment
+                Notification::create([
+                    'user_id' => $deal->buyer_id,
+                    'type' => 'payment_required',
+                    'title' => 'Payment Required',
+                    'message' => "Deal #{$deal->id} is confirmed. Please proceed with payment of KES {$deal->total_amount}",
+                    'priority' => 'high',
+                    'action_url' => "/deals/{$deal->id}/pay",
+                ]);
+            } else {
+                // Notify the other party of acceptance
+                $otherUserId = $isBuyer ? $deal->farmer_id : $deal->buyer_id;
+                $userRole = $isBuyer ? 'Buyer' : 'Farmer';
+                
+                Notification::create([
+                    'user_id' => $otherUserId,
+                    'type' => 'deal_accepted',
+                    'title' => 'Deal Accepted',
+                    'message' => "{$userRole} has accepted deal #{$deal->id}",
+                    'priority' => 'high',
+                    'action_url' => "/deals/{$deal->id}",
+                ]);
+            }
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Deal status updated successfully',
-                'deal' => $deal->fresh(['farmer', 'buyer', 'product']),
-            ]);
+                'message' => 'Deal accepted successfully',
+                'deal' => $deal->fresh(['farmer', 'buyer', 'product', 'payment']),
+            ], 200);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Failed to update deal: ' . $e->getMessage()], 500);
+            return response()->json(['error' => 'Failed to accept deal: ' . $e->getMessage()], 500);
         }
     }
 
     /**
-     * Update payment status
+     * Buyer or Farmer rejects a deal before both confirm
+     * 
+     * MANAGED MARKETPLACE: Can only reject in confirmation stages.
+     * Deal moves to 'rejected' status and deal is cancelled.
      */
-    public function updatePaymentStatus(Request $request, $id)
+    public function reject(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
-            'payment_status' => 'required|in:unpaid,partial,paid,refunded',
-            'notes' => 'nullable|string',
+            'reason' => 'nullable|string|max:1000',
         ]);
 
         if ($validator->fails()) {
@@ -318,20 +211,68 @@ class DealsController extends Controller
         }
 
         $user = auth()->user();
-        $deal = Deal::findOrFail($id);
+        $deal = Deal::with(['farmer', 'buyer', 'product', 'payment'])->findOrFail($id);
 
-        // Only buyer and farmer can update payment status
+        // Verify user is part of the deal
         if ($deal->farmer_id !== $user->id && $deal->buyer_id !== $user->id) {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            return response()->json(['error' => 'Unauthorized - not part of this deal'], 403);
         }
 
-        $deal->payment_status = $request->payment_status;
-        $deal->save();
+        // Can only reject if both haven't confirmed yet
+        if ($deal->status === 'both_confirmed' || $deal->status === 'payment_pending' || 
+            $deal->status === 'accepted' || $deal->status === 'completed' || 
+            $deal->status === 'rejected' || $deal->status === 'cancelled') {
+            
+            return response()->json([
+                'error' => 'Cannot reject deal in current status',
+                'current_status' => $deal->status
+            ], 422);
+        }
 
-        return response()->json([
-            'message' => 'Payment status updated successfully',
-            'deal' => $deal->fresh(['farmer', 'buyer', 'product']),
-        ]);
+        DB::beginTransaction();
+        try {
+            $isBuyer = $user->id === $deal->buyer_id;
+            $userRole = $isBuyer ? 'Buyer' : 'Farmer';
+
+            // Update deal status to rejected
+            $deal->status = 'rejected';
+            $deal->save();
+
+            // Notify the other party
+            $otherUserId = $isBuyer ? $deal->farmer_id : $deal->buyer_id;
+            Notification::create([
+                'user_id' => $otherUserId,
+                'type' => 'deal_rejected',
+                'title' => 'Deal Rejected',
+                'message' => "{$userRole} has rejected deal #{$deal->id}" . ($request->reason ? ": {$request->reason}" : ""),
+                'priority' => 'normal',
+                'action_url' => "/deals/{$deal->id}",
+            ]);
+
+            // Notify admin
+            $admins = User::where('role', 'admin')->get();
+            foreach ($admins as $admin) {
+                Notification::create([
+                    'user_id' => $admin->id,
+                    'type' => 'deal_rejected',
+                    'title' => 'Deal Rejected by User',
+                    'message' => "Deal #{$deal->id} was rejected by {$userRole}",
+                    'priority' => 'normal',
+                    'action_url' => "/admin/deals/{$deal->id}",
+                ]);
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Deal rejected successfully',
+                'deal' => $deal->fresh(['farmer', 'buyer', 'product']),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Failed to reject deal: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -344,9 +285,16 @@ class DealsController extends Controller
         if ($user->role === 'farmer') {
             $stats = [
                 'total_deals' => Deal::where('farmer_id', $user->id)->count(),
-                'pending_deals' => Deal::where('farmer_id', $user->id)->where('status', 'pending')->count(),
-                'active_deals' => Deal::where('farmer_id', $user->id)->active()->count(),
-                'completed_deals' => Deal::where('farmer_id', $user->id)->where('status', 'completed')->count(),
+                'pending_confirmation' => Deal::where('farmer_id', $user->id)
+                    ->where('status', 'pending_farmer_confirmation')->count(),
+                'awaiting_payment' => Deal::where('farmer_id', $user->id)
+                    ->where('status', 'payment_pending')->count(),
+                'active_deals' => Deal::where('farmer_id', $user->id)
+                    ->whereIn('status', ['accepted', 'in_transit', 'delivered'])->count(),
+                'completed_deals' => Deal::where('farmer_id', $user->id)
+                    ->where('status', 'completed')->count(),
+                'rejected_deals' => Deal::where('farmer_id', $user->id)
+                    ->where('status', 'rejected')->count(),
                 'total_revenue' => Deal::where('farmer_id', $user->id)
                     ->where('status', 'completed')
                     ->sum('total_amount'),
@@ -357,15 +305,21 @@ class DealsController extends Controller
         } else {
             $stats = [
                 'total_deals' => Deal::where('buyer_id', $user->id)->count(),
-                'pending_deals' => Deal::where('buyer_id', $user->id)->where('status', 'pending')->count(),
-                'active_deals' => Deal::where('buyer_id', $user->id)->active()->count(),
-                'completed_deals' => Deal::where('buyer_id', $user->id)->where('status', 'completed')->count(),
+                'pending_confirmation' => Deal::where('buyer_id', $user->id)
+                    ->where('status', 'pending_buyer_confirmation')->count(),
+                'awaiting_payment' => Deal::where('buyer_id', $user->id)
+                    ->where('status', 'payment_pending')->count(),
+                'active_deals' => Deal::where('buyer_id', $user->id)
+                    ->whereIn('status', ['accepted', 'in_transit', 'delivered'])->count(),
+                'completed_deals' => Deal::where('buyer_id', $user->id)
+                    ->where('status', 'completed')->count(),
+                'rejected_deals' => Deal::where('buyer_id', $user->id)
+                    ->where('status', 'rejected')->count(),
                 'total_spent' => Deal::where('buyer_id', $user->id)
                     ->where('status', 'completed')
                     ->sum('total_amount'),
                 'pending_payments' => Deal::where('buyer_id', $user->id)
-                    ->whereIn('status', ['accepted', 'in_transit', 'delivered'])
-                    ->where('payment_status', '!=', 'paid')
+                    ->where('status', 'payment_pending')
                     ->sum('total_amount'),
             ];
         }
