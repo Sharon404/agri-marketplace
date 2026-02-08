@@ -53,6 +53,23 @@ class ApiService {
 
       if (response.statusCode == 201) {
         return jsonDecode(response.body);
+      } else if (response.statusCode == 422) {
+        // Validation error - parse and format error messages
+        final errorBody = jsonDecode(response.body);
+        if (errorBody is Map<String, dynamic>) {
+          // Extract validation errors
+          final errors = <String>[];
+          errorBody.forEach((key, value) {
+            if (value is List && value.isNotEmpty) {
+              errors.add(value.first.toString());
+            } else if (value is String) {
+              errors.add(value);
+            }
+          });
+          final errorMessage = errors.isNotEmpty ? errors.join('\n') : 'Validation failed';
+          throw Exception(errorMessage);
+        }
+        throw Exception('Validation failed: ${response.body}');
       } else {
         // Try to parse as JSON, fallback to plain text
         try {
@@ -66,6 +83,7 @@ class ApiService {
     } on TimeoutException {
       throw Exception('Registration timeout: Backend server not responding');
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Registration error: ${e.toString()}');
     }
   }

@@ -148,30 +148,63 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final success = await authProvider.register(
-        _nameController.text,
-        _emailController.text,
-        _phoneController.text,
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _phoneController.text.trim(),
         _passwordController.text,
         _selectedRole,
       );
 
-      if (success) {
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration successful! Welcome to Agri Marketplace.')),
+          const SnackBar(
+            content: Text('Registration successful! Welcome to Agri Marketplace.'),
+            backgroundColor: Colors.green,
+          ),
         );
         Navigator.pushReplacementNamed(context, '/home');
-      } else {
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed: Could not create account')),
+          const SnackBar(
+            content: Text('Registration failed: Could not create account'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } catch (e) {
       print('Registration error: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: ${e.toString()}')),
-      );
+      if (mounted) {
+        // Extract the actual error message (remove "Exception: " prefix if present)
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
+        
+        // Show error in dialog for better visibility
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Registration Failed'),
+              ],
+            ),
+            content: Text(errorMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 

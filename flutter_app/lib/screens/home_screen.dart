@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'admin_dashboard_screen.dart';
+import 'deals_list_screen.dart';
+import 'farmer_supplies_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -272,6 +274,48 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
+      // Quick Action Buttons for Farmers
+      Row(
+        children: [
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DealsListScreen()),
+                );
+              },
+              icon: const Icon(Icons.handshake),
+              label: const Text('My Deals'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const FarmerSuppliesScreen()),
+                );
+              },
+              icon: const Icon(Icons.inventory_2),
+              label: const Text('My Supplies'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
 
       // Quick Stats Row
       Row(
@@ -856,6 +900,25 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
+      // Quick Action Button for Buyers
+      ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const DealsListScreen()),
+          );
+        },
+        icon: const Icon(Icons.handshake),
+        label: const Text('View My Deals'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
+          minimumSize: const Size(double.infinity, 0),
+        ),
+      ),
+      const SizedBox(height: 20),
     ];
   }
 
