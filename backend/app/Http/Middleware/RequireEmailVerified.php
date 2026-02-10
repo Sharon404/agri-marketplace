@@ -15,6 +15,8 @@ class RequireEmailVerified
      * - Creating requests
      * - Accepting deals
      * - Sending messages
+     * 
+     * Also requires admin approval for managed marketplace.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -30,6 +32,15 @@ class RequireEmailVerified
                 'error' => 'Email verification required',
                 'message' => 'Please verify your email address before accessing this feature',
                 'email' => $user->email,
+            ], 403);
+        }
+
+        // Check if user is approved by admin (for managed marketplace)
+        if ($user->approval_status !== 'approved') {
+            return response()->json([
+                'error' => 'Account approval required',
+                'message' => 'Your account is pending admin approval. Please wait or contact support.',
+                'approval_status' => $user->approval_status,
             ], 403);
         }
 

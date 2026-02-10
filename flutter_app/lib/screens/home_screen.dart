@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
-import 'admin_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,11 +27,24 @@ class _HomeScreenState extends State<HomeScreen> {
       final role = authProvider.user?['role'];
 
       if (role == 'admin') {
-        // Admin gets redirected to admin dashboard
+        // Admins use the web-based dashboard at /admin-dashboard
+        // This mobile app is for farmers and buyers only
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Admin Access'),
+              content: const Text('Admin dashboard features are available in the web interface at:\n\nhttp://localhost:8000/admin-dashboard'),
+              actions: [
+                TextButton(
+                  onPressed: () async {
+                    await authProvider.logout();
+                    Navigator.pushReplacementNamed(context, '/login');
+                  },
+                  child: const Text('Return to Login'),
+                ),
+              ],
+            ),
           );
         });
         return;
@@ -159,6 +171,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildFarmerDashboard() {
     final marketHighlights = _analytics['market_highlights'] as List<dynamic>? ?? [];
+    final totalVerifiedBuyers = _analytics['total_verified_buyers'] ?? 0;
 
     // Show default content if no analytics data
     if (marketHighlights.isEmpty) {
@@ -203,7 +216,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 20),
         _buildStatCard('Total Listings', '0', Icons.inventory, Colors.blue),
-        _buildStatCard('Active Requests', '0', Icons.shopping_cart, Colors.orange),
+        _buildStatCard('Verified Buyers', '$totalVerifiedBuyers', Icons.verified_user, Colors.orange),
         _buildStatCard('Your Earnings', '\$0', Icons.attach_money, Colors.green),
       ];
     }
@@ -625,6 +638,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<Widget> _buildBuyerDashboard() {
     final supplyHighlights = _analytics['supply_highlights'] as List<dynamic>? ?? [];
+    final totalVerifiedFarmers = _analytics['total_verified_farmers'] ?? 0;
 
     // Show default content if no analytics data
     if (supplyHighlights.isEmpty) {
@@ -669,7 +683,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 20),
         _buildStatCard('Available Products', '8+', Icons.inventory, Colors.green),
-        _buildStatCard('Verified Farmers', '15', Icons.verified_user, Colors.blue),
+        _buildStatCard('Verified Farmers', '$totalVerifiedFarmers', Icons.verified_user, Colors.blue),
         _buildStatCard('Your Requests', '0', Icons.shopping_cart, Colors.orange),
       ];
     }

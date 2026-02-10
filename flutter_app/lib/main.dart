@@ -8,7 +8,6 @@ import 'screens/home_screen.dart';
 import 'screens/create_listing_screen.dart';
 import 'screens/create_request_screen.dart';
 import 'screens/create_supply_screen.dart';
-import 'screens/admin_dashboard_screen.dart';
 import 'screens/activation_screen.dart';
 import 'screens/deals_list_screen.dart';
 import 'screens/farmer_supplies_screen.dart';
@@ -53,7 +52,6 @@ class AgriMarketplaceApp extends StatelessWidget {
         '/create-listing': (context) => const CreateListingScreen(),
         '/create-request': (context) => const CreateRequestScreen(),
         '/create-supply': (context) => const CreateSupplyScreen(),
-        '/admin-dashboard': (context) => const AdminDashboardScreen(),
         '/activation': (context) => const ActivationScreen(),
         '/deals': (context) => const DealsListScreen(),
         '/farmer-supplies': (context) => const FarmerSuppliesScreen(),

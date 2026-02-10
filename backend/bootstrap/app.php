@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'require.email.verified' => \App\Http\Middleware\RequireEmailVerified::class,
         ]);
     })

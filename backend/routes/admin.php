@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\UserApprovalController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function () {
@@ -9,6 +10,16 @@ Route::middleware(['auth:api', 'role:admin'])->prefix('admin')->group(function (
     // User management
     Route::get('/users', [DashboardController::class, 'users']);
     Route::post('/users/{user}/verify', [DashboardController::class, 'verifyUser']);
+
+    // User approval workflow
+    Route::prefix('approvals')->group(function () {
+        Route::get('/pending', [UserApprovalController::class, 'pendingUsers']);
+        Route::get('/approved', [UserApprovalController::class, 'approvedUsers']);
+        Route::get('/rejected', [UserApprovalController::class, 'rejectedUsers']);
+        Route::get('/statistics', [UserApprovalController::class, 'statistics']);
+        Route::post('/users/{user}/approve', [UserApprovalController::class, 'approve']);
+        Route::post('/users/{user}/reject', [UserApprovalController::class, 'reject']);
+    });
 
     // Deal management
     Route::get('/deals', [DashboardController::class, 'deals']);

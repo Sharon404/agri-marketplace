@@ -36,24 +36,42 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            $marketHighlights = $products->map(function ($product) {
+            // Get global verified buyers count (all buyers approved by admin)
+            $totalVerifiedBuyers = User::where('role', 'buyer')
+                ->where('approval_status', 'approved')
+                ->count() ?? 0;
+
+            $marketHighlights = $products->map(function ($product) use ($totalVerifiedBuyers) {
                 $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
                     $q->where('name', $product->name);
                 })->sum('quantity') ?? 0;
 
+                // Count unique verified buyers requesting this product
+                $buyersForProduct = User::where('role', 'buyer')
+                    ->where('approval_status', 'approved')
+                    ->whereHas('buyerRequests', function ($q) use ($product) {
+                        $q->whereHas('product', function ($subQ) use ($product) {
+                            $subQ->where('name', $product->name);
+                        })->where('is_active', true);
+                    })->count() ?? 0;
+
                 return [
                     'product' => $product->name,
                     'demand_level' => $product->demand_count > 8 ? 'High' : ($product->demand_count > 4 ? 'Medium' : 'Low'),
-                    'buyers_requesting' => $product->demand_count,
+                    'buyers_requesting' => $buyersForProduct > 0 ? $buyersForProduct : $product->demand_count,
                     'weekly_demand' => $totalQuantity . ' units',
                     'active_suppliers' => $product->supplier_count,
+                    'verified_buyers_total' => $totalVerifiedBuyers,
                     'demand_region' => 'Multiple',
                 ];
             })->toArray();
 
             return response()->json([
                 'success' => true,
-                'data' => ['market_highlights' => $marketHighlights],
+                'data' => [
+                    'market_highlights' => $marketHighlights,
+                    'total_verified_buyers' => $totalVerifiedBuyers,
+                ],
                 'message' => null
             ]);
         } catch (\Exception $e) {
@@ -90,23 +108,30 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            $supplyHighlights = $products->map(function ($product) {
+            // Get global verified farmers count (all farmers approved by admin)
+            $totalVerifiedFarmers = User::where('role', 'farmer')
+                ->where('approval_status', 'approved')
+                ->count() ?? 0;
+
+            $supplyHighlights = $products->map(function ($product) use ($totalVerifiedFarmers) {
                 $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
                     $q->where('name', $product->name);
                 })->where('is_active', true)->sum('quantity') ?? 0;
 
-                $verifiedFarmers = User::where('role', 'farmer')
-                    ->where('email_verified', true)
+                // For each product, count unique approved suppliers
+                $suppliersForProduct = User::where('role', 'farmer')
+                    ->where('approval_status', 'approved')
                     ->whereHas('farmerListings', function ($q) use ($product) {
-                        $q->where('product_id', function ($subQ) use ($product) {
-                            $subQ->select('id')->from('products')->where('name', $product->name);
-                        });
-                    })->count();
+                        $q->whereHas('product', function ($subQ) use ($product) {
+                            $subQ->where('name', $product->name);
+                        })->where('is_active', true);
+                    })->count() ?? 0;
 
                 return [
                     'product' => $product->name,
                     'supply_availability' => $totalQuantity . ' units',
-                    'verified_farmers' => $verifiedFarmers ?: $product->supplier_count,
+                    'verified_farmers' => $suppliersForProduct > 0 ? $suppliersForProduct : $product->supplier_count,
+                    'verified_farmers_total' => $totalVerifiedFarmers,
                     'delivery_coverage' => 'Multiple Regions',
                     'reliability_stats' => '95% on-time deliveries',
                 ];
@@ -114,7 +139,10 @@ class AnalyticsController extends Controller
 
             return response()->json([
                 'success' => true,
-                'data' => ['supply_highlights' => $supplyHighlights],
+                'data' => [
+                    'supply_highlights' => $supplyHighlights,
+                    'total_verified_farmers' => $totalVerifiedFarmers,
+                ],
                 'message' => null
             ]);
         } catch (\Exception $e) {

@@ -28,6 +28,10 @@ class User extends Authenticatable implements JWTSubject
         'phone_verified',
         'activation_token',
         'activated_at',
+        'approval_status',
+        'approved_by',
+        'approved_at',
+        'rejection_reason',
     ];
 
     /**
@@ -52,6 +56,7 @@ class User extends Authenticatable implements JWTSubject
             'password' => 'hashed',
             'email_verified' => 'boolean',
             'phone_verified' => 'boolean',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -75,6 +80,69 @@ class User extends Authenticatable implements JWTSubject
         return [
             'role' => $this->role,
         ];
+    }
+
+    /**
+     * Get the admin who approved this user.
+     */
+    public function approvedByAdmin()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    /**
+     * Get users approved by this admin.
+     */
+    public function approvedUsers()
+    {
+        return $this->hasMany(User::class, 'approved_by');
+    }
+
+    /**
+     * Check if user is approved by admin.
+     */
+    public function isApproved(): bool
+    {
+        return $this->approval_status === 'approved';
+    }
+
+    /**
+     * Check if user is pending approval.
+     */
+    public function isPending(): bool
+    {
+        return $this->approval_status === 'pending';
+    }
+
+    /**
+     * Check if user is rejected.
+     */
+    public function isRejected(): bool
+    {
+        return $this->approval_status === 'rejected';
+    }
+
+    /**
+     * Approve user (set status to approved and record approver).
+     */
+    public function approve(User $admin)
+    {
+        $this->approval_status = 'approved';
+        $this->approved_by = $admin->id;
+        $this->approved_at = now();
+        $this->save();
+    }
+
+    /**
+     * Reject user (set status to rejected and record reason).
+     */
+    public function reject(string $reason, User $admin)
+    {
+        $this->approval_status = 'rejected';
+        $this->approved_by = $admin->id;
+        $this->approved_at = now();
+        $this->rejection_reason = $reason;
+        $this->save();
     }
 
     /**
