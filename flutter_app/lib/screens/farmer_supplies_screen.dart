@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'create_supply_screen.dart';
 
 class FarmerSuppliesScreen extends StatefulWidget {
   const FarmerSuppliesScreen({super.key});
@@ -259,12 +258,8 @@ class _FarmerSuppliesScreenState extends State<FarmerSuppliesScreen> {
                           const SizedBox(height: 24),
                           ElevatedButton.icon(
                             onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CreateSupplyScreen(),
-                                ),
-                              ).then((_) => _loadSupplies());
+                              Navigator.pushNamed(context, '/create-supply')
+                                  .then((_) => _loadSupplies());
                             },
                             icon: const Icon(Icons.add),
                             label: const Text('Create Supply'),
@@ -290,12 +285,8 @@ class _FarmerSuppliesScreenState extends State<FarmerSuppliesScreen> {
                     ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreateSupplyScreen(),
-            ),
-          ).then((_) => _loadSupplies());
+          Navigator.pushNamed(context, '/create-supply')
+              .then((_) => _loadSupplies());
         },
         icon: const Icon(Icons.add),
         label: const Text('New Supply'),

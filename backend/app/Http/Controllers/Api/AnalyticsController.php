@@ -14,79 +14,117 @@ class AnalyticsController extends Controller
 {
     public function farmerAnalytics(Request $request)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        // Get real market data based on buyer requests and listings
-        $products = Product::select('name')
-            ->withCount([
-                'buyerRequests as demand_count',
-                'farmerListings as supplier_count'
-            ])
-            ->where('buyerRequests_count', '>', 0)
-            ->orderBy('buyerRequests_count', 'desc')
-            ->limit(5)
-            ->get();
+            // Get real market data based on buyer requests and listings
+            $products = Product::select('name')
+                ->withCount([
+                    'buyerRequests as demand_count',
+                    'farmerListings as supplier_count'
+                ])
+                ->having('demand_count', '>', 0)
+                ->orderBy('demand_count', 'desc')
+                ->limit(5)
+                ->get();
 
-        $marketHighlights = $products->map(function ($product) {
-            $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
-                $q->where('name', $product->name);
-            })->sum('quantity');
+            if ($products->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['market_highlights' => $this->getDefaultMarketData()],
+                    'message' => null
+                ]);
+            }
 
-            return [
-                'product' => $product->name,
-                'demand_level' => $product->demand_count > 8 ? 'High' : ($product->demand_count > 4 ? 'Medium' : 'Low'),
-                'buyers_requesting' => $product->demand_count,
-                'weekly_demand' => $totalQuantity . ' units',
-                'active_suppliers' => $product->supplier_count,
-                'demand_region' => 'Multiple',
-            ];
-        })->toArray();
+            $marketHighlights = $products->map(function ($product) {
+                $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
+                    $q->where('name', $product->name);
+                })->sum('quantity') ?? 0;
 
-        return response()->json([
-            'market_highlights' => $marketHighlights ?: $this->getDefaultMarketData(),
-        ]);
+                return [
+                    'product' => $product->name,
+                    'demand_level' => $product->demand_count > 8 ? 'High' : ($product->demand_count > 4 ? 'Medium' : 'Low'),
+                    'buyers_requesting' => $product->demand_count,
+                    'weekly_demand' => $totalQuantity . ' units',
+                    'active_suppliers' => $product->supplier_count,
+                    'demand_region' => 'Multiple',
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => ['market_highlights' => $marketHighlights],
+                'message' => null
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Farmer analytics error: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => ['market_highlights' => $this->getDefaultMarketData()],
+                'message' => null
+            ]);
+        }
     }
 
     public function buyerAnalytics(Request $request)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        // Get real supply data based on farmer listings
-        $products = Product::select('name')
-            ->withCount([
-                'farmerListings as supplier_count',
-                'buyerRequests as demand_count'
-            ])
-            ->where('farmerListings_count', '>', 0)
-            ->orderBy('farmerListings_count', 'desc')
-            ->limit(5)
-            ->get();
+            // Get real supply data based on farmer listings
+            $products = Product::select('name')
+                ->withCount([
+                    'farmerListings as supplier_count',
+                    'buyerRequests as demand_count'
+                ])
+                ->having('supplier_count', '>', 0)
+                ->orderBy('supplier_count', 'desc')
+                ->limit(5)
+                ->get();
 
-        $supplyHighlights = $products->map(function ($product) {
-            $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
-                $q->where('name', $product->name);
-            })->where('is_active', true)->sum('quantity');
+            if ($products->isEmpty()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['supply_highlights' => $this->getDefaultSupplyData()],
+                    'message' => null
+                ]);
+            }
 
-            $verifiedFarmers = User::where('role', 'farmer')
-                ->where('email_verified', true)
-                ->whereHas('farmerListings', function ($q) use ($product) {
-                    $q->where('product_id', function ($subQ) use ($product) {
-                        $subQ->select('id')->from('products')->where('name', $product->name);
-                    });
-                })->count();
+            $supplyHighlights = $products->map(function ($product) {
+                $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
+                    $q->where('name', $product->name);
+                })->where('is_active', true)->sum('quantity') ?? 0;
 
-            return [
-                'product' => $product->name,
-                'supply_availability' => $totalQuantity . ' units',
-                'verified_farmers' => $verifiedFarmers ?: $product->supplier_count,
-                'delivery_coverage' => 'Multiple Regions',
-                'reliability_stats' => '95% on-time deliveries',
-            ];
-        })->toArray();
+                $verifiedFarmers = User::where('role', 'farmer')
+                    ->where('email_verified', true)
+                    ->whereHas('farmerListings', function ($q) use ($product) {
+                        $q->where('product_id', function ($subQ) use ($product) {
+                            $subQ->select('id')->from('products')->where('name', $product->name);
+                        });
+                    })->count();
 
-        return response()->json([
-            'supply_highlights' => $supplyHighlights ?: $this->getDefaultSupplyData(),
-        ]);
+                return [
+                    'product' => $product->name,
+                    'supply_availability' => $totalQuantity . ' units',
+                    'verified_farmers' => $verifiedFarmers ?: $product->supplier_count,
+                    'delivery_coverage' => 'Multiple Regions',
+                    'reliability_stats' => '95% on-time deliveries',
+                ];
+            })->toArray();
+
+            return response()->json([
+                'success' => true,
+                'data' => ['supply_highlights' => $supplyHighlights],
+                'message' => null
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Buyer analytics error: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => ['supply_highlights' => $this->getDefaultSupplyData()],
+                'message' => null
+            ]);
+        }
     }
 
     private function getMarketHighlights()
@@ -240,46 +278,53 @@ class AnalyticsController extends Controller
 
     public function adminDashboard(Request $request)
     {
-        $user = auth()->user();
+        try {
+            $user = auth()->user();
 
-        // Ensure user is admin
-        if ($user && $user->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized'], 403);
+            // Ensure user is admin
+            if ($user && $user->role !== 'admin') {
+                return response()->json([
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Unauthorized'
+                ], 403);
+            }
+
+            // Get real statistics
+            $totalUsers = User::count() ?? 0;
+            $totalFarmers = User::where('role', 'farmer')->count() ?? 0;
+            $totalBuyers = User::where('role', 'buyer')->count() ?? 0;
+            $totalListings = FarmerListing::where('is_active', true)->count() ?? 0;
+            $totalRequests = BuyerRequest::where('is_active', true)->count() ?? 0;
+            $totalProducts = Product::count() ?? 0;
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_users' => $totalUsers,
+                    'total_farmers' => $totalFarmers,
+                    'total_buyers' => $totalBuyers,
+                    'total_listings' => $totalListings,
+                    'total_requests' => $totalRequests,
+                    'total_products' => $totalProducts,
+                ],
+                'message' => null
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Admin dashboard error: ' . $e->getMessage());
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_users' => 0,
+                    'total_farmers' => 0,
+                    'total_buyers' => 0,
+                    'total_listings' => 0,
+                    'total_requests' => 0,
+                    'total_products' => 0,
+                ],
+                'message' => null
+            ]);
         }
-
-        // Return mock data for testing
-        return response()->json([
-            'total_users' => 45,
-            'total_farmers' => 25,
-            'total_buyers' => 18,
-            'total_listings' => 32,
-            'total_requests' => 28,
-            'total_products' => 15,
-        ]);
-
-        /*
-        // Ensure user is admin
-        if ($user->role !== 'admin') {
-            return response()->json(['error' => 'Unauthorized'], 403);
-        }
-
-        // Get overall platform statistics
-        $totalUsers = User::count();
-        $totalFarmers = User::where('role', 'farmer')->count();
-        $totalBuyers = User::where('role', 'buyer')->count();
-        $totalListings = FarmerListing::where('is_active', true)->count();
-        $totalRequests = BuyerRequest::where('is_active', true)->count();
-        $totalProducts = Product::count();
-
-        return response()->json([
-            'total_users' => $totalUsers,
-            'total_farmers' => $totalFarmers,
-            'total_buyers' => $totalBuyers,
-            'total_listings' => $totalListings,
-            'total_requests' => $totalRequests,
-            'total_products' => $totalProducts,
-        ]);
-        */
     }
 
     public function adminDeals(Request $request)

@@ -3,8 +3,6 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
 import 'admin_dashboard_screen.dart';
-import 'deals_list_screen.dart';
-import 'farmer_supplies_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -281,10 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const DealsListScreen()),
-                );
+                Navigator.pushNamed(context, '/deals');
               },
               icon: const Icon(Icons.handshake),
               label: const Text('My Deals'),
@@ -299,10 +294,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const FarmerSuppliesScreen()),
-                );
+                Navigator.pushNamed(context, '/farmer-supplies');
               },
               icon: const Icon(Icons.inventory_2),
               label: const Text('My Supplies'),
@@ -904,10 +896,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Quick Action Button for Buyers
       ElevatedButton.icon(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const DealsListScreen()),
-          );
+          Navigator.pushNamed(context, '/deals');
         },
         icon: const Icon(Icons.handshake),
         label: const Text('View My Deals'),

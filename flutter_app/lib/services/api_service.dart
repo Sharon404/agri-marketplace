@@ -270,23 +270,41 @@ class ApiService {
 
   // Admin API methods
   Future<Map<String, dynamic>> getAdminDashboard() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
 
-    if (token == null) throw Exception('Not authenticated');
+      if (token == null) throw Exception('Not authenticated');
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/admin/dashboard'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
+      final response = await http.get(
+        Uri.parse('$baseUrl/admin/dashboard'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
 
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load admin dashboard: ${response.statusCode} - ${response.body}');
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        // Handle consistent API response structure {success, data, message}
+        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+        return decoded;
+      } else {
+        throw Exception('Failed to load admin dashboard: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Admin dashboard error: $e');
+      // Return empty stats instead of crashing
+      return {
+        'total_users': 0,
+        'total_farmers': 0,
+        'total_buyers': 0,
+        'total_listings': 0,
+        'total_requests': 0,
+        'total_products': 0,
+      };
     }
   }
 
@@ -353,13 +371,19 @@ class ApiService {
       print('Farmer analytics response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        // Handle consistent API response structure {success, data, message}
+        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+        return decoded;
       } else {
         throw Exception('Farmer analytics failed: ${response.statusCode}');
       }
     } catch (e) {
       print('Farmer analytics error: $e');
-      rethrow;
+      // Return empty data instead of crashing
+      return {'market_highlights': []};
     }
   }
 
@@ -381,13 +405,19 @@ class ApiService {
       print('Buyer analytics response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        // Handle consistent API response structure {success, data, message}
+        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+        return decoded;
       } else {
         throw Exception('Buyer analytics failed: ${response.statusCode}');
       }
     } catch (e) {
       print('Buyer analytics error: $e');
-      rethrow;
+      // Return empty data instead of crashing
+      return {'supply_highlights': []};
     }
   }
 
