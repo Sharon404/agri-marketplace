@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BuyerRequestResource;
 use App\Models\BuyerRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -53,11 +54,11 @@ class BuyerRequestController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Extract user ID from JWT token in Authorization header
-        $buyerId = $this->getUserIdFromToken($request);
+        // Use authenticated user ID (JWT guard)
+        $buyerId = auth('api')->id();
         if (!$buyerId) {
-            // Fallback to buyer_id from request if provided
-            $buyerId = $request->input('buyer_id', 2);
+            // Fallback to legacy token parsing or request input
+            $buyerId = $this->getUserIdFromToken($request) ?: $request->input('buyer_id', 2);
         }
 
         // Get buyer's location if not provided

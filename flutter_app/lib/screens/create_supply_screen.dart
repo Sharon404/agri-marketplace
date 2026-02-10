@@ -22,6 +22,8 @@ class _CreateSupplyScreenState extends State<CreateSupplyScreen> {
   String _selectedUnit = 'kg';
   bool _isLoading = false;
   bool _isLoadingProducts = true;
+  String? _errorMessage;
+  int _retryCount = 0;
 
   final List<String> _unitOptions = ['kg', 'ton', 'bag', 'crate', 'piece'];
 
@@ -43,33 +45,73 @@ class _CreateSupplyScreenState extends State<CreateSupplyScreen> {
 
   Future<void> _loadProducts() async {
     try {
+      setState(() {
+        _isLoadingProducts = true;
+        _errorMessage = null;
+      });
+
+      print('Loading products... (attempt ${_retryCount + 1})');
       final products = await _apiService.getProducts();
+      print('Products loaded: ${products.length} items');
+      
+      if (!mounted) return;
+      
       setState(() {
         _products = products;
         if (products.isNotEmpty) {
           _selectedProductId = products[0]['id'];
         }
         _isLoadingProducts = false;
+        _errorMessage = null;
+        _retryCount = 0;
       });
     } catch (e) {
-      setState(() => _isLoadingProducts = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load products: ${e.toString()}')),
-        );
+      print('Error loading products: $e');
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoadingProducts = false;
+        _errorMessage = e.toString();
+      });
+
+      // Auto-retry up to 2 times after 1 second delay
+      if (_retryCount < 2) {
+        _retryCount++;
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          _loadProducts();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load products: ${e.toString()}'),
+              action: SnackBarAction(
+                label: 'RETRY',
+                onPressed: () {
+                  _retryCount = 0;
+                  _loadProducts();
+                },
+              ),
+            ),
+          );
+        }
       }
     }
   }
 
   Future<void> _selectDate(BuildContext context, TextEditingController controller) async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: today,
+      firstDate: today,
+      lastDate: DateTime(now.year + 1, now.month, now.day),
     );
 
-    if (picked != null) {
+    if (picked != null && mounted) {
       setState(() {
         controller.text = picked.toIso8601String().split('T')[0];
       });
@@ -134,13 +176,52 @@ class _CreateSupplyScreenState extends State<CreateSupplyScreen> {
         backgroundColor: Colors.green,
       ),
       body: _isLoadingProducts
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Loading products... ${_retryCount > 0 ? '(attempt ${_retryCount + 1})' : ''}'),
+                ],
+              ),
+            )
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
+                    // Error display
+                    if (_errorMessage != null)
+                      Card(
+                        color: Colors.red.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Failed to load products',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_errorMessage!, textAlign: TextAlign.center),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _retryCount = 0;
+                                  _loadProducts();
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
                     // Product selection
                     if (_products.isNotEmpty)
                       DropdownButtonFormField<int>(

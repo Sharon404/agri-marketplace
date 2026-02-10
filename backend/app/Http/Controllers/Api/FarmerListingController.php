@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\FarmerListingResource;
 use App\Models\FarmerListing;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -53,11 +54,11 @@ class FarmerListingController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        // Extract user ID from JWT token in Authorization header
-        $farmerId = $this->getUserIdFromToken($request);
+        // Use authenticated user ID (JWT guard)
+        $farmerId = auth('api')->id();
         if (!$farmerId) {
-            // Fallback to farmer_id from request if provided
-            $farmerId = $request->input('farmer_id', 1);
+            // Fallback to legacy token parsing or request input
+            $farmerId = $this->getUserIdFromToken($request) ?: $request->input('farmer_id', 1);
         }
 
         // Get farmer's location if not provided

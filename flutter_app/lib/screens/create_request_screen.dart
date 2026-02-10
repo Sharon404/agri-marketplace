@@ -22,6 +22,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   String _urgency = 'medium';
   bool _isLoading = false;
   bool _isLoadingProducts = true;
+  String? _errorMessage;
+  int _retryCount = 0;
 
   @override
   void initState() {
@@ -31,19 +33,58 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
   Future<void> _loadProducts() async {
     try {
+      setState(() {
+        _isLoadingProducts = true;
+        _errorMessage = null;
+      });
+
+      print('Loading products... (attempt ${_retryCount + 1})');
       final products = await _apiService.getProducts();
+      print('Products loaded: ${products.length} items');
+      
+      if (!mounted) return;
+      
       setState(() {
         _products = products;
         if (products.isNotEmpty) {
           _selectedProductId = products[0]['id'];
         }
         _isLoadingProducts = false;
+        _errorMessage = null;
+        _retryCount = 0;
       });
     } catch (e) {
-      setState(() => _isLoadingProducts = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load products: ${e.toString()}')),
-      );
+      print('Error loading products: $e');
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoadingProducts = false;
+        _errorMessage = e.toString();
+      });
+
+      // Auto-retry up to 2 times after 1 second delay
+      if (_retryCount < 2) {
+        _retryCount++;
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          _loadProducts();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load products: ${e.toString()}'),
+              action: SnackBarAction(
+                label: 'RETRY',
+                onPressed: () {
+                  _retryCount = 0;
+                  _loadProducts();
+                },
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -55,13 +96,52 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         backgroundColor: Colors.green,
       ),
       body: _isLoadingProducts
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Loading products... ${_retryCount > 0 ? '(attempt ${_retryCount + 1})' : ''}'),
+                ],
+              ),
+            )
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
+                    // Error display
+                    if (_errorMessage != null)
+                      Card(
+                        color: Colors.red.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Failed to load products',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_errorMessage!, textAlign: TextAlign.center),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _retryCount = 0;
+                                  _loadProducts();
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
                     if (_products.isNotEmpty)
                       DropdownButtonFormField<int>(
                         initialValue: _selectedProductId,
@@ -85,8 +165,25 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                           return null;
                         },
                       )
-                    else
-                      const Text('No products available'),
+                    else if (_errorMessage == null)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.inventory_2_outlined, size: 48),
+                              const SizedBox(height: 8),
+                              const Text('No products available'),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: _loadProducts,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Refresh'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _quantityController,

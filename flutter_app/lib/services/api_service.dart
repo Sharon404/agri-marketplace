@@ -1,11 +1,29 @@
 import 'dart:convert';
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // For web: use localhost for better compatibility in browser context
-  static const String baseUrl = 'http://localhost:8000/api';
+  // Base URL can be overridden at build time with --dart-define=API_BASE_URL=...
+  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+
+  static String get baseUrl {
+    if (_envBaseUrl.isNotEmpty) {
+      return _envBaseUrl;
+    }
+
+    if (kIsWeb) {
+      return 'http://localhost:8000/api';
+    }
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+        return 'http://10.0.2.2:8000/api';
+      default:
+        return 'http://localhost:8000/api';
+    }
+  }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
@@ -177,8 +195,19 @@ class ApiService {
       print('Products response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['data'] ?? [];
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          return decoded;
+        }
+        if (decoded is Map<String, dynamic>) {
+          if (decoded['data'] is List) {
+            return decoded['data'] as List<dynamic>;
+          }
+          if (decoded['products'] is List) {
+            return decoded['products'] as List<dynamic>;
+          }
+        }
+        return [];
       } else {
         throw Exception('Failed to load products: ${response.statusCode}');
       }
@@ -207,9 +236,13 @@ class ApiService {
     if (response.statusCode == 201) {
       return jsonDecode(response.body);
     } else {
-      final errorBody = jsonDecode(response.body);
-      final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
-      throw Exception('Failed to create listing: $errorMessage (Status: ${response.statusCode})');
+      try {
+        final errorBody = jsonDecode(response.body);
+        final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
+        throw Exception('Failed to create listing: $errorMessage (Status: ${response.statusCode})');
+      } catch (_) {
+        throw Exception('Failed to create listing: Status ${response.statusCode}');
+      }
     }
   }
 

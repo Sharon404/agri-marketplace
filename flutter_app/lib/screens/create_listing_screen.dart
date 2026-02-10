@@ -23,6 +23,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   int? _selectedProductId;
   bool _isLoading = false;
   bool _isLoadingProducts = true;
+  String? _errorMessage;
+  int _retryCount = 0;
 
   @override
   void initState() {
@@ -30,21 +32,78 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _loadProducts();
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final now = DateTime.now();
+    final tomorrow = DateTime(now.year, now.month, now.day).add(const Duration(days: 1));
+    
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: tomorrow,
+      firstDate: tomorrow,
+      lastDate: DateTime(now.year + 1, now.month, now.day),
+    );
+
+    if (picked != null && mounted) {
+      setState(() {
+        _availabilityDateController.text = picked.toIso8601String().split('T')[0];
+      });
+    }
+  }
+
   Future<void> _loadProducts() async {
     try {
+      setState(() {
+        _isLoadingProducts = true;
+        _errorMessage = null;
+      });
+
+      print('Loading products... (attempt ${_retryCount + 1})');
       final products = await _apiService.getProducts();
+      print('Products loaded: ${products.length} items');
+      
+      if (!mounted) return;
+      
       setState(() {
         _products = products;
         if (products.isNotEmpty) {
           _selectedProductId = products[0]['id'];
         }
         _isLoadingProducts = false;
+        _errorMessage = null;
+        _retryCount = 0;
       });
     } catch (e) {
-      setState(() => _isLoadingProducts = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load products: ${e.toString()}')),
-      );
+      print('Error loading products: $e');
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoadingProducts = false;
+        _errorMessage = e.toString();
+      });
+
+      // Auto-retry up to 2 times after 1 second delay
+      if (_retryCount < 2) {
+        _retryCount++;
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) {
+          _loadProducts();
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load products: ${e.toString()}'),
+              action: SnackBarAction(
+                label: 'RETRY',
+                onPressed: () {
+                  _retryCount = 0;
+                  _loadProducts();
+                },
+              ),
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -56,16 +115,53 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         backgroundColor: Colors.green,
       ),
       body: _isLoadingProducts
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 16),
+                  Text('Loading products... ${_retryCount > 0 ? '(attempt ${_retryCount + 1})' : ''}'),
+                ],
+              ),
+            )
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Form(
                 key: _formKey,
                 child: ListView(
                   children: [
+                    if (_errorMessage != null)
+                      Card(
+                        color: Colors.red.shade50,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Failed to load products',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(_errorMessage!, textAlign: TextAlign.center),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  _retryCount = 0;
+                                  _loadProducts();
+                                },
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Retry'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     if (_products.isNotEmpty)
                       DropdownButtonFormField<int>(
-                        initialValue: _selectedProductId,
+                        value: _selectedProductId,
                         decoration: const InputDecoration(
                           labelText: 'Select Product',
                           border: OutlineInputBorder(),
@@ -86,8 +182,25 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           return null;
                         },
                       )
-                    else
-                      const Text('No products available'),
+                    else if (_errorMessage == null)
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.inventory_2_outlined, size: 48),
+                              const SizedBox(height: 8),
+                              const Text('No products available'),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: _loadProducts,
+                                icon: const Icon(Icons.refresh),
+                                label: const Text('Refresh'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _quantityController,
@@ -139,9 +252,23 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         labelText: 'Availability Date (YYYY-MM-DD)',
                         border: OutlineInputBorder(),
                       ),
+                      readOnly: true,
+                      onTap: () => _selectDate(context),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter availability date';
+                        }
+                        try {
+                          final selected = DateTime.parse(value);
+                          // Get today at midnight for fair comparison
+                          final today = DateTime.now();
+                          final todayMidnight = DateTime(today.year, today.month, today.day);
+                          // Selected date must be at least tomorrow (today + 1 day)
+                          if (selected.isBefore(todayMidnight.add(const Duration(days: 1)))) {
+                            return 'Availability date must be tomorrow or later';
+                          }
+                        } catch (_) {
+                          return 'Please enter a valid date';
                         }
                         return null;
                       },

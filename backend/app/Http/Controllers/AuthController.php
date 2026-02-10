@@ -37,12 +37,20 @@ class AuthController extends Controller
             'phone_verified' => false,
         ]);
 
-        // Generate token
-        $token = 'jwt_' . base64_encode($user->id . ':' . $user->email . ':' . time());
+        // Generate JWT token
+        $token = JWTAuth::fromUser($user);
 
         return response()->json([
             'message' => 'Registration successful',
-            'user' => $user->makeHidden('password')->toArray(),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'email_verified' => $user->email_verified,
+                'phone_verified' => $user->phone_verified,
+            ],
             'access_token' => $token,
             'token_type' => 'bearer',
         ], 201);
@@ -62,12 +70,20 @@ class AuthController extends Controller
             return response()->json(['error' => 'Invalid credentials'], 401);
         }
 
-        // Generate token
-        $token = 'jwt_' . base64_encode($user->id . ':' . $user->email . ':' . time());
+        // Generate JWT token
+        $token = JWTAuth::fromUser($user);
 
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user->makeHidden('password')->toArray(),
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'role' => $user->role,
+                'email_verified' => $user->email_verified,
+                'phone_verified' => $user->phone_verified,
+            ],
             'access_token' => $token,
             'token_type' => 'bearer',
         ]);
