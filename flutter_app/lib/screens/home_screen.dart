@@ -13,6 +13,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService _apiService = ApiService();
   Map<String, dynamic> _analytics = {};
+  List<dynamic> _listings = [];
+  List<dynamic> _requests = [];
+  List<dynamic> _deals = [];
   bool _isLoading = true;
 
   @override
@@ -50,11 +53,21 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Load role-specific analytics
+      // Load role-specific analytics and listings/requests
       if (role == 'farmer') {
         _analytics = await _apiService.getFarmerAnalytics();
+        _listings = await _apiService.getFarmerListings();
       } else if (role == 'buyer') {
         _analytics = await _apiService.getBuyerAnalytics();
+        _requests = await _apiService.getBuyerRequests();
+      }
+
+      // Load deals for both roles
+      try {
+        _deals = await _apiService.getDeals();
+      } catch (e) {
+        print('Error loading deals: $e');
+        _deals = [];
       }
 
       if (mounted) {
@@ -337,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: _buildStatCard(
               'Your Listings',
-              '0', // This would come from user-specific data
+              '${_listings.length}',
               Icons.inventory,
               Colors.orange,
             ),
@@ -399,6 +412,27 @@ class _HomeScreenState extends State<HomeScreen> {
         ...marketHighlights.take(6).map((highlight) => _buildMarketOpportunityCard(highlight)),
 
       const SizedBox(height: 24),
+
+      // Your Listings Section
+      if (_listings.isNotEmpty) ...[
+        Row(
+          children: [
+            const Icon(Icons.inventory_2, color: Colors.green, size: 28),
+            const SizedBox(width: 8),
+            Text(
+              'Your Listings (${_listings.length})',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ..._listings.take(5).map((listing) => _buildListingCard(listing)),
+        const SizedBox(height: 24),
+      ],
 
       // Call to Action Section
       Container(
@@ -636,6 +670,151 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildListingCard(dynamic listing) {
+    final productName = listing['product']?['name'] ?? 'Unknown Product';
+    final quantity = listing['quantity'] ?? 0;
+    final price = listing['price_per_unit'] ?? 0;
+    final location = listing['location'] ?? 'N/A';
+    final description = listing['description'] ?? '';
+    final isActive = listing['is_active'] ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.green.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: isActive ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  productName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.green.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isActive ? Colors.green.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.green : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (description.isNotEmpty)
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (description.isNotEmpty) const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quantity',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$quantity kg',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Price per Unit',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${price is int ? price : (price as double).toStringAsFixed(2)} Ksh',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text(
+                location,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   List<Widget> _buildBuyerDashboard() {
     final supplyHighlights = _analytics['supply_highlights'] as List<dynamic>? ?? [];
     final totalVerifiedFarmers = _analytics['total_verified_farmers'] ?? 0;
@@ -830,6 +1009,27 @@ class _HomeScreenState extends State<HomeScreen> {
         ...supplyHighlights.take(6).map((highlight) => _buildProductCard(highlight)),
 
       const SizedBox(height: 24),
+
+      // Your Requests Section
+      if (_requests.isNotEmpty) ...[
+        Row(
+          children: [
+            const Icon(Icons.shopping_cart, color: Colors.blue, size: 28),
+            const SizedBox(width: 8),
+            Text(
+              'Your Requests (${_requests.length})',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        ..._requests.take(5).map((request) => _buildRequestCard(request)),
+        const SizedBox(height: 24),
+      ],
 
       // Call to Action Section
       Container(
@@ -1081,6 +1281,151 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () => Navigator.pushNamed(context, '/create-request'),
             icon: Icon(Icons.add_shopping_cart, color: productColor),
             tooltip: 'Request this product',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRequestCard(dynamic request) {
+    final productName = request['product']?['name'] ?? 'Unknown Product';
+    final quantity = request['quantity'] ?? 0;
+    final maxPrice = request['max_price'] ?? 0;
+    final location = request['location'] ?? 'N/A';
+    final description = request['description'] ?? '';
+    final isActive = request['is_active'] ?? false;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(
+          color: isActive ? Colors.blue.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  productName,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.blue.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isActive ? Colors.blue.withOpacity(0.3) : Colors.grey.withOpacity(0.3),
+                  ),
+                ),
+                child: Text(
+                  isActive ? 'Active' : 'Inactive',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.blue : Colors.grey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (description.isNotEmpty)
+            Text(
+              description,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          if (description.isNotEmpty) const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Quantity Needed',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$quantity kg',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Max Price',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${maxPrice is int ? maxPrice : (maxPrice as double).toStringAsFixed(2)} Ksh',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(Icons.location_on, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 4),
+              Text(
+                location,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
         ],
       ),
