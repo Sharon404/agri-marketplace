@@ -23,7 +23,7 @@ class AnalyticsController extends Controller
                     'buyerRequests as demand_count',
                     'farmerListings as supplier_count'
                 ])
-                ->having('demand_count', '>', 0)
+                ->whereHas('buyerRequests')
                 ->orderBy('demand_count', 'desc')
                 ->limit(5)
                 ->get();
@@ -95,7 +95,9 @@ class AnalyticsController extends Controller
                     'farmerListings as supplier_count',
                     'buyerRequests as demand_count'
                 ])
-                ->having('supplier_count', '>', 0)
+                ->whereHas('farmerListings', function ($query) {
+                    $query->where('is_active', true);
+                })
                 ->orderBy('supplier_count', 'desc')
                 ->limit(5)
                 ->get();

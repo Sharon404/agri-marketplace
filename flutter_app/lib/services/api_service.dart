@@ -34,7 +34,7 @@ class ApiService {
           'email': email,
           'password': password,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 20));
 
       print('Login response status: ${response.statusCode}');
       print('Login response body: ${response.body}');
@@ -64,7 +64,7 @@ class ApiService {
           'password_confirmation': password,
           'role': role,
         }),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 20));
 
       print('Register response status: ${response.statusCode}');
       print('Register response body: ${response.body}');
@@ -189,7 +189,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$baseUrl/products'),
         headers: headers,
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 20));
 
       print('Products response status: ${response.statusCode}');
       print('Products response body: ${response.body}');

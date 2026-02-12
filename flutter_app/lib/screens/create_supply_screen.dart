@@ -81,21 +81,6 @@ class _CreateSupplyScreenState extends State<CreateSupplyScreen> {
         if (mounted) {
           _loadProducts();
         }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to load products: ${e.toString()}'),
-              action: SnackBarAction(
-                label: 'RETRY',
-                onPressed: () {
-                  _retryCount = 0;
-                  _loadProducts();
-                },
-              ),
-            ),
-          );
-        }
       }
     }
   }
