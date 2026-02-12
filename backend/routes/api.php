@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AnalyticsController;
 use App\Http\Controllers\Api\DealsController;
 use App\Http\Controllers\Api\MessagesController;
 use App\Http\Controllers\Api\ReviewsController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Admin\DealController as AdminDealController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PasswordResetController;
@@ -41,6 +42,11 @@ Route::middleware('auth:api')->prefix('email')->group(function () {
     Route::post('/send-verification', [EmailVerificationController::class, 'sendVerification']);
     Route::post('/verify', [EmailVerificationController::class, 'verifyCode']);
     Route::post('/resend', [EmailVerificationController::class, 'resendCode']);
+});
+
+// User routes - mode switching without breaking existing API
+Route::middleware('auth:api')->prefix('user')->group(function () {
+    Route::get('/capabilities', [UserController::class, 'getCapabilities']);
 });
 
 // Products - public read
