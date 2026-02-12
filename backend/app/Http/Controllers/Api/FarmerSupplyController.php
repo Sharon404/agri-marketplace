@@ -12,7 +12,13 @@ class FarmerSupplyController extends Controller
     public function __construct()
     {
         $this->middleware('auth:api');
-        $this->middleware('role:farmer');
+        
+        // Capability-based access control (with role-based fallback)
+        $this->middleware('capability:sell');
+        
+        // OLD: Role-based access control (deprecated, kept for reference)
+        // $this->middleware('role:farmer');
+        
         $this->middleware('require.email.verified');
     }
 

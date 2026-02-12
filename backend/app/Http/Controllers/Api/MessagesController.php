@@ -96,9 +96,15 @@ class MessagesController extends Controller
             return response()->json(['error' => 'Cannot send message to yourself'], 422);
         }
 
-        // Determine farmer and buyer IDs
-        $farmerId = $user->role === 'farmer' ? $user->id : $receiver->id;
-        $buyerId = $user->role === 'buyer' ? $user->id : $receiver->id;
+        // Determine farmer and buyer IDs based on capabilities (with role fallback)
+        $userIsSeller = $user->canSell() || $user->role === 'farmer';
+        $userIsBuyer = $user->canBuy() || $user->role === 'buyer';
+        $receiverIsSeller = $receiver->canSell() || $receiver->role === 'farmer';
+        $receiverIsBuyer = $receiver->canBuy() || $receiver->role === 'buyer';
+        
+        // Assign farmer_id and buyer_id based on capabilities
+        $farmerId = $userIsSeller ? $user->id : $receiver->id;
+        $buyerId = $userIsBuyer ? $user->id : $receiver->id;
 
         DB::beginTransaction();
         try {

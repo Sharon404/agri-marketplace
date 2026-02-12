@@ -15,7 +15,12 @@ class BuyerRequestController extends Controller
     {
         // Protect write operations with authentication
         $this->middleware('auth:api')->only(['store', 'update', 'destroy']);
-        $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
+        
+        // Capability-based access control (with role-based fallback)
+        $this->middleware('capability:buy')->only(['store', 'update', 'destroy']);
+        
+        // OLD: Role-based access control (deprecated, kept for reference)
+        // $this->middleware('role:buyer')->only(['store', 'update', 'destroy']);
     }
 
     /**

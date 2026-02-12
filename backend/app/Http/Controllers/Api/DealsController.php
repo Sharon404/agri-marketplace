@@ -282,7 +282,13 @@ class DealsController extends Controller
     {
         $user = auth()->user();
 
-        if ($user->role === 'farmer') {
+        // Capability-based check with role fallback
+        $isSeller = $user->canSell();
+        $isBuyer = $user->canBuy();
+        
+        // Determine user's primary role based on capabilities
+        // If user has sell capability (or is farmer role), show seller stats
+        if ($isSeller || $user->role === 'farmer') {
             $stats = [
                 'total_deals' => Deal::where('farmer_id', $user->id)->count(),
                 'pending_confirmation' => Deal::where('farmer_id', $user->id)
