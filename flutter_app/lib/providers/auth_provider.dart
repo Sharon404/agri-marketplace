@@ -21,8 +21,15 @@ class AuthProvider with ChangeNotifier {
 
     if (token != null && userData != null) {
       _token = token;
-      _user = json.decode(userData);
-      _isAuthenticated = true;
+      try {
+        _user = json.decode(userData) as Map<String, dynamic>;
+        _isAuthenticated = true;
+        print('Restored user from storage: $_user');
+        print('Restored user role: ${_user?['role']}');
+      } catch (e) {
+        print('Error decoding user data: $e');
+        _isAuthenticated = false;
+      }
       notifyListeners();
     }
   }
@@ -64,11 +71,18 @@ class AuthProvider with ChangeNotifier {
     try {
       final response = await _apiService.register(name, email, phone, password, role);
 
+      print('=== REGISTER RESPONSE ===');
+      print('Full response: $response');
+      print('User key exists: ${response.containsKey('user')}');
+
       // Backend returns 'access_token' from JWT auth
       if (response.containsKey('access_token') || response.containsKey('token')) {
         _token = response['access_token'] ?? response['token'];
-        _user = response['user'];
+        _user = response['user'] as Map<String, dynamic>? ?? {};
         _isAuthenticated = true;
+        
+        print('User object: $_user');
+        print('User role: ${_user?['role']}');
 
         // Save to persistent storage
         final prefs = await SharedPreferences.getInstance();

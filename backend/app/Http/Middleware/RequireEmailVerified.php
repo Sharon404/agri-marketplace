@@ -20,7 +20,8 @@ class RequireEmailVerified
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = auth()->user();
+        // Support both API (JWT) and web (session) authentication
+        $user = auth('api')->user() ?: auth()->user();
 
         if (!$user) {
             return response()->json(['error' => 'Unauthorized'], 401);
@@ -36,7 +37,8 @@ class RequireEmailVerified
         }
 
         // Check if user is approved by admin (for managed marketplace)
-        if ($user->approval_status !== 'approved') {
+        // Admins are auto-approved
+        if ($user->role !== 'admin' && $user->approval_status !== 'approved') {
             return response()->json([
                 'error' => 'Account approval required',
                 'message' => 'Your account is pending admin approval. Please wait or contact support.',

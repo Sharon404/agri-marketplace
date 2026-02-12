@@ -15,10 +15,30 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Prefer session user (web), but allow JWT-authenticated admin for API-driven access
         $user = auth()->user();
 
-        if (!$user || $user->role !== 'admin') {
-            return redirect('/login')->with('error', 'Unauthorized access');
+        if (!$user) {
+            // Try API guard
+            try {
+                $apiUser = auth('api')->user();
+            } catch (\Exception $e) {
+                $apiUser = null;
+            }
+
+            if ($apiUser) {
+                // If API user is admin, set as the current user for the request
+                if ($apiUser->role === 'admin') {
+                    auth()->setUser($apiUser);
+                    return $next($request);
+                }
+            }
+
+            return redirect()->route('login')->with('error', 'Unauthorized access');
+        }
+
+        if ($user->role !== 'admin') {
+            return redirect()->route('login')->with('error', 'Unauthorized access');
         }
 
         return $next($request);

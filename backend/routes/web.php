@@ -1,11 +1,17 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+// Admin web login routes
+Route::get('/login', [AdminAuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AdminAuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AdminAuthController::class, 'logout'])->name('logout');
 
 // Admin Dashboard Routes (Web-based)
 Route::middleware(['auth:web', 'admin'])->prefix('admin-dashboard')->name('admin.')->group(function () {
