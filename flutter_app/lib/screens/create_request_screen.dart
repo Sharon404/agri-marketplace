@@ -18,6 +18,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
   List<dynamic> _products = [];
   int? _selectedProductId;
   String _urgency = 'medium';
+  DateTime? _neededByDate;
   bool _isLoading = false;
   bool _isLoadingProducts = true;
   String? _errorMessage;
@@ -228,6 +229,57 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _neededByDate ?? DateTime.now().add(const Duration(days: 1)),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setState(() => _neededByDate = picked);
+                        }
+                      },
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today, color: Colors.green),
+                              const SizedBox(width: 16),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Needed By Date',
+                                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _neededByDate != null
+                                        ? '${_neededByDate!.year}-${_neededByDate!.month.toString().padLeft(2, '0')}-${_neededByDate!.day.toString().padLeft(2, '0')}'
+                                        : 'Tap to select date',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _neededByDate != null ? Colors.black : Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              if (_neededByDate != null)
+                                IconButton(
+                                  icon: const Icon(Icons.close),
+                                  onPressed: () => setState(() => _neededByDate = null),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     TextFormField(
                       controller: _descriptionController,
                       decoration: const InputDecoration(
@@ -274,6 +326,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
           'delivery_location': _deliveryLocationController.text,
           'urgency': _urgency,
           'description': _descriptionController.text,
+          if (_neededByDate != null) 'needed_by': _neededByDate!.toIso8601String().split('T')[0],
         });
 
         ScaffoldMessenger.of(context).showSnackBar(

@@ -19,6 +19,7 @@ class BuyerRequest extends Model
         'urgency', // low, medium, high
         'description',
         'is_active',
+        'needed_by',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class BuyerRequest extends Model
         return [
             'target_price' => 'decimal:2',
             'is_active' => 'boolean',
+            'needed_by' => 'date',
         ];
     }
 

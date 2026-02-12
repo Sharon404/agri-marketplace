@@ -53,16 +53,31 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      // Load role-specific analytics and listings/requests
+      // Load role-specific analytics first (required)
       if (role == 'farmer') {
         _analytics = await _apiService.getFarmerAnalytics();
-        _listings = await _apiService.getFarmerListings();
       } else if (role == 'buyer') {
         _analytics = await _apiService.getBuyerAnalytics();
-        _requests = await _apiService.getBuyerRequests();
       }
 
-      // Load deals for both roles
+      // Load additional data (optional - failures don't break the UI)
+      if (role == 'farmer') {
+        try {
+          _listings = await _apiService.getFarmerListings();
+        } catch (e) {
+          print('Error loading farmer listings: $e');
+          _listings = [];
+        }
+      } else if (role == 'buyer') {
+        try {
+          _requests = await _apiService.getBuyerRequests();
+        } catch (e) {
+          print('Error loading buyer requests: $e');
+          _requests = [];
+        }
+      }
+
+      // Load deals for both roles (optional)
       try {
         _deals = await _apiService.getDeals();
       } catch (e) {
@@ -79,7 +94,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load data: ${e.toString()}')),
+          SnackBar(content: Text('Failed to load analytics: ${e.toString()}')),
         );
       }
     }
@@ -341,7 +356,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: _buildStatCard(
               'Active Buyers',
-              marketHighlights.isNotEmpty ? '${marketHighlights[0]['buyers_requesting'] ?? 0}' : '0',
+              '${_analytics['total_verified_buyers'] ?? 0}',
               Icons.people,
               Colors.blue,
             ),
@@ -938,7 +953,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: _buildStatCard(
               'Verified Farmers',
-              '${supplyHighlights.isNotEmpty ? supplyHighlights[0]['verified_farmers'] ?? 0 : 0}',
+              '${totalVerifiedFarmers}',
               Icons.verified_user,
               Colors.green,
             ),
