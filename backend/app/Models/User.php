@@ -176,4 +176,64 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->role === 'agent';
     }
+
+    /**
+     * Get the user's capability record.
+     * 
+     * This relationship supports capability-based access control
+     * alongside the existing role-based system.
+     */
+    public function capability()
+    {
+        return $this->hasOne(UserCapability::class);
+    }
+
+    /**
+     * Get or create the user's capability record.
+     * 
+     * Helper method to ensure a capability record exists.
+     */
+    public function getOrCreateCapability(): UserCapability
+    {
+        return $this->capability()->firstOrCreate(
+            ['user_id' => $this->id],
+            [
+                'can_buy' => false,
+                'can_sell' => false,
+                'status' => 'active',
+            ]
+        );
+    }
+
+    /**
+     * Check if user can buy (capability-based check).
+     * Falls back to role-based check if no capability record exists.
+     */
+    public function canBuy(): bool
+    {
+        $capability = $this->capability;
+        
+        if ($capability) {
+            return $capability->canBuy();
+        }
+        
+        // Fallback to role-based check for backward compatibility
+        return $this->role === 'buyer' && $this->approval_status === 'approved';
+    }
+
+    /**
+     * Check if user can sell (capability-based check).
+     * Falls back to role-based check if no capability record exists.
+     */
+    public function canSell(): bool
+    {
+        $capability = $this->capability;
+        
+        if ($capability) {
+            return $capability->canSell();
+        }
+        
+        // Fallback to role-based check for backward compatibility
+        return $this->role === 'farmer' && $this->approval_status === 'approved';
+    }
 }
