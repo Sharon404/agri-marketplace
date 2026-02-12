@@ -36,24 +36,25 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            // Get global verified buyers count (all buyers approved by admin)
-            $totalVerifiedBuyers = User::where('role', 'buyer')
-                ->where('approval_status', 'approved')
-                ->count() ?? 0;
+            // Get global verified buyers count using capability system
+            // Users with can_buy capability (includes role-based fallback in User model)
+            $totalVerifiedBuyers = User::whereHas('capability', function ($q) {
+                $q->where('can_buy', true)->where('status', 'active');
+            })->count() ?? 0;
 
             $marketHighlights = $products->map(function ($product) use ($totalVerifiedBuyers) {
                 $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
                     $q->where('name', $product->name);
                 })->sum('quantity') ?? 0;
 
-                // Count unique verified buyers requesting this product
-                $buyersForProduct = User::where('role', 'buyer')
-                    ->where('approval_status', 'approved')
-                    ->whereHas('buyerRequests', function ($q) use ($product) {
-                        $q->whereHas('product', function ($subQ) use ($product) {
-                            $subQ->where('name', $product->name);
-                        })->where('is_active', true);
-                    })->count() ?? 0;
+                // Count unique verified buyers requesting this product (capability-based)
+                $buyersForProduct = User::whereHas('capability', function ($q) {
+                    $q->where('can_buy', true)->where('status', 'active');
+                })->whereHas('buyerRequests', function ($q) use ($product) {
+                    $q->whereHas('product', function ($subQ) use ($product) {
+                        $subQ->where('name', $product->name);
+                    })->where('is_active', true);
+                })->count() ?? 0;
 
                 return [
                     'product' => $product->name,
@@ -110,24 +111,25 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            // Get global verified farmers count (all farmers approved by admin)
-            $totalVerifiedFarmers = User::where('role', 'farmer')
-                ->where('approval_status', 'approved')
-                ->count() ?? 0;
+            // Get global verified farmers count using capability system
+            // Users with can_sell capability (includes role-based fallback in User model)
+            $totalVerifiedFarmers = User::whereHas('capability', function ($q) {
+                $q->where('can_sell', true)->where('status', 'active');
+            })->count() ?? 0;
 
             $supplyHighlights = $products->map(function ($product) use ($totalVerifiedFarmers) {
                 $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
                     $q->where('name', $product->name);
                 })->where('is_active', true)->sum('quantity') ?? 0;
 
-                // For each product, count unique approved suppliers
-                $suppliersForProduct = User::where('role', 'farmer')
-                    ->where('approval_status', 'approved')
-                    ->whereHas('farmerListings', function ($q) use ($product) {
-                        $q->whereHas('product', function ($subQ) use ($product) {
-                            $subQ->where('name', $product->name);
-                        })->where('is_active', true);
-                    })->count() ?? 0;
+                // For each product, count unique approved suppliers (capability-based)
+                $suppliersForProduct = User::whereHas('capability', function ($q) {
+                    $q->where('can_sell', true)->where('status', 'active');
+                })->whereHas('farmerListings', function ($q) use ($product) {
+                    $q->whereHas('product', function ($subQ) use ($product) {
+                        $subQ->where('name', $product->name);
+                    })->where('is_active', true);
+                })->count() ?? 0;
 
                 return [
                     'product' => $product->name,

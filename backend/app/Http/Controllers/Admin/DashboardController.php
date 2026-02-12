@@ -19,17 +19,48 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        // Capability-based metrics with optimized queries
         $stats = [
             'total_users' => User::count(),
-            'total_farmers' => User::where('role', 'farmer')->count(),
-            'total_buyers' => User::where('role', 'buyer')->count(),
+            
+            // Capability-based counts (replaces role-based)
+            'verified_sellers' => User::whereHas('capability', function ($q) {
+                $q->where('can_sell', true)->where('status', 'active');
+            })->count(),
+            
+            'verified_buyers' => User::whereHas('capability', function ($q) {
+                $q->where('can_buy', true)->where('status', 'active');
+            })->count(),
+            
+            // Pending capability requests
+            'pending_seller_requests' => User::whereHas('capability', function ($q) {
+                $q->whereNotNull('sell_requested_at')
+                  ->whereNull('sell_approved_at');
+            })->count(),
+            
+            'pending_buyer_requests' => User::whereHas('capability', function ($q) {
+                $q->whereNotNull('buy_requested_at')
+                  ->whereNull('buy_approved_at');
+            })->count(),
+            
+            // Legacy role counts (kept for comparison during transition)
+            'total_farmers_by_role' => User::where('role', 'farmer')->count(),
+            'total_buyers_by_role' => User::where('role', 'buyer')->count(),
+            
             'active_listings' => FarmerListing::active()->count(),
             'active_requests' => BuyerRequest::active()->count(),
             'pending_deals' => Deal::where('status', 'pending')->count(),
             'active_deals' => Deal::whereIn('status', ['accepted', 'logistics_assigned', 'delivered'])->count(),
             'completed_deals' => Deal::where('status', 'completed')->count(),
-            'held_funds' => Transaction::where('status', 'held')->sum('amount'),
-            'total_disputes' => Dispute::where('status', '!=', 'closed')->count(),
+            
+            // Check if transactions table exists before querying
+            'held_funds' => \Schema::hasTable('transactions') 
+                ? Transaction::where('status', 'held')->sum('amount') 
+                : 0,
+            
+            'total_disputes' => \Schema::hasTable('disputes')
+                ? Dispute::where('status', '!=', 'closed')->count()
+                : 0,
         ];
 
         return response()->json([

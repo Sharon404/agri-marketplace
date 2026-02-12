@@ -17,12 +17,38 @@ class AdminDashboardController extends Controller
      */
     public function index()
     {
+        // Capability-based metrics with optimized queries
         $stats = [
             'total_users' => User::where('role', '!=', 'admin')->count(),
+            
+            // Legacy approval metrics (for user approval workflow)
             'pending_approvals' => User::where('approval_status', 'pending')->count(),
             'approved_users' => User::where('approval_status', 'approved')->count(),
+            
+            // NEW: Capability-based metrics
+            'verified_sellers' => User::whereHas('capability', function ($q) {
+                $q->where('can_sell', true)->where('status', 'active');
+            })->count(),
+            
+            'verified_buyers' => User::whereHas('capability', function ($q) {
+                $q->where('can_buy', true)->where('status', 'active');
+            })->count(),
+            
+            // NEW: Pending capability requests
+            'pending_seller_requests' => User::whereHas('capability', function ($q) {
+                $q->whereNotNull('sell_requested_at')
+                  ->whereNull('sell_approved_at');
+            })->count(),
+            
+            'pending_buyer_requests' => User::whereHas('capability', function ($q) {
+                $q->whereNotNull('buy_requested_at')
+                  ->whereNull('buy_approved_at');
+            })->count(),
+            
+            // Legacy role counts (transitional)
             'total_farmers' => User::where('role', 'farmer')->count(),
             'total_buyers' => User::where('role', 'buyer')->count(),
+            
             'active_deals' => Deal::whereIn('status', ['pending', 'accepted'])->count(),
             'active_listings' => FarmerListing::where('is_active', true)->count(),
             'active_requests' => BuyerRequest::where('is_active', true)->count(),
