@@ -16,7 +16,14 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   final authProvider = AuthProvider();
-  await authProvider.checkAuthStatus();
+  
+  try {
+    await authProvider.checkAuthStatus();
+    print('✓ Auth status check completed');
+  } catch (e, stackTrace) {
+    print('✗ Error checking auth status: $e');
+    print('Stack trace: $stackTrace');
+  }
   
   runApp(
     MultiProvider(
@@ -36,13 +43,20 @@ class AgriMarketplaceApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Agri Marketplace',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.green,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        useMaterial3: false,
       ),
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
-          return auth.isAuthenticated ? const HomeScreen() : const LoginScreen();
+          print('Building home screen - authenticated: ${auth.isAuthenticated}');
+          if (auth.isAuthenticated) {
+            return const HomeScreen();
+          } else {
+            return const LoginScreen();
+          }
         },
       ),
       routes: {
