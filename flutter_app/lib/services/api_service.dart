@@ -686,4 +686,68 @@ class ApiService {
       rethrow;
     }
   }
+
+  /// Get user's current capabilities (for mode switching)
+  Future<Map<String, dynamic>> getUserCapabilities() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.get(
+        Uri.parse('$baseUrl/user/capabilities'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      print('Get user capabilities status: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
+          return decoded['data'] as Map<String, dynamic>;
+        }
+        return decoded;
+      } else {
+        throw Exception('Failed to get capabilities: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Get user capabilities error: $e');
+      rethrow;
+    }
+  }
+
+  /// Request a capability (buy or sell)
+  Future<Map<String, dynamic>> requestCapability(String capabilityType) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('token');
+
+      if (token == null) throw Exception('Not authenticated');
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/capabilities/request'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'capability': capabilityType}),
+      ).timeout(const Duration(seconds: 10));
+
+      print('Request capability status: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        final errorBody = jsonDecode(response.body);
+        throw Exception(errorBody['message'] ?? 'Failed to request capability');
+      }
+    } catch (e) {
+      print('Request capability error: $e');
+      rethrow;
+    }
+  }
 }

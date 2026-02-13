@@ -144,12 +144,142 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Agri Marketplace'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await authProvider.logout();
-              Navigator.pushReplacementNamed(context, '/login');
+          // Dropdown Menu
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              switch (value) {
+                case 'listings':
+                  Navigator.pushNamed(context, '/home');
+                  break;
+                case 'deals':
+                  Navigator.pushNamed(context, '/deals');
+                  break;
+                case 'create-listing':
+                  Navigator.pushNamed(context, '/create-listing');
+                  break;
+                case 'create-request':
+                  Navigator.pushNamed(context, '/create-request');
+                  break;
+                case 'supplies':
+                  Navigator.pushNamed(context, '/farmer-supplies');
+                  break;
+                case 'toggle-mode':
+                  _showModeToggleDialog();
+                  break;
+                case 'profile':
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Profile page coming soon')),
+                  );
+                  break;
+                case 'settings':
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Settings page coming soon')),
+                  );
+                  break;
+                case 'logout':
+                  await authProvider.logout();
+                  Navigator.pushReplacementNamed(context, '/login');
+                  break;
+              }
             },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'listings',
+                child: Row(
+                  children: [
+                    Icon(Icons.inventory, size: 20),
+                    SizedBox(width: 12),
+                    Text('Browse Listings'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'deals',
+                child: Row(
+                  children: [
+                    Icon(Icons.handshake, size: 20),
+                    SizedBox(width: 12),
+                    Text('My Deals'),
+                  ],
+                ),
+              ),
+              if (role == 'farmer')
+                const PopupMenuItem<String>(
+                  value: 'create-listing',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_circle, size: 20),
+                      SizedBox(width: 12),
+                      Text('Create Listing'),
+                    ],
+                  ),
+                ),
+              if (role == 'buyer')
+                const PopupMenuItem<String>(
+                  value: 'create-request',
+                  child: Row(
+                    children: [
+                      Icon(Icons.add_shopping_cart, size: 20),
+                      SizedBox(width: 12),
+                      Text('Create Request'),
+                    ],
+                  ),
+                ),
+              if (role == 'farmer')
+                const PopupMenuItem<String>(
+                  value: 'supplies',
+                  child: Row(
+                    children: [
+                      Icon(Icons.warehouse, size: 20),
+                      SizedBox(width: 12),
+                      Text('My Supplies'),
+                    ],
+                  ),
+                ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'toggle-mode',
+                child: Row(
+                  children: [
+                    Icon(Icons.swap_horiz, size: 20),
+                    SizedBox(width: 12),
+                    Text('Toggle Buy/Sell Mode'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, size: 20),
+                    SizedBox(width: 12),
+                    Text('Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings, size: 20),
+                    SizedBox(width: 12),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 20),
+                    SizedBox(width: 12),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
+            icon: const Icon(Icons.menu),
           ),
         ],
       ),
@@ -1474,5 +1604,241 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+  void _showModeToggleDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return ModeToggleDialog(apiService: _apiService);
+      },
+    );
+  }
+}
+
+/// Mode Toggle Dialog Widget
+class ModeToggleDialog extends StatefulWidget {
+  final ApiService apiService;
+
+  const ModeToggleDialog({
+    required this.apiService,
+    super.key,
+  });
+
+  @override
+  _ModeToggleDialogState createState() => _ModeToggleDialogState();
+}
+
+class _ModeToggleDialogState extends State<ModeToggleDialog> {
+  late Future<Map<String, dynamic>> _capabilityFuture;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _capabilityFuture = widget.apiService.getUserCapabilities();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Buy/Sell Mode'),
+      content: FutureBuilder<Map<String, dynamic>>(
+        future: _capabilityFuture,
+        builder: (context, snapshot) {
+          if (_isLoading) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                const Text('Updating mode...'),
+              ],
+            );
+          }
+
+          if (snapshot.hasError) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Unable to load current mode',
+                  style: TextStyle(color: Colors.red),
+                ),
+                const SizedBox(height: 16),
+                Text('Error: ${snapshot.error}'),
+              ],
+            );
+          }
+
+          if (!snapshot.hasData) {
+            return const SizedBox(
+              height: 100,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final capabilities = snapshot.data!;
+          final canBuy = capabilities['can_buy'] ?? false;
+          final canSell = capabilities['can_sell'] ?? false;
+          final buyStatus = capabilities['buy_status'] ?? 'none';
+          final sellStatus = capabilities['sell_status'] ?? 'none';
+
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                _buildModeCard(
+                  title: 'Buyer Mode',
+                  isEnabled: canBuy,
+                  status: buyStatus,
+                  icon: Icons.shopping_cart,
+                  color: Colors.blue,
+                  onToggle: () => _toggleCapability('buy', !canBuy),
+                ),
+                const SizedBox(height: 16),
+                _buildModeCard(
+                  title: 'Seller Mode',
+                  isEnabled: canSell,
+                  status: sellStatus,
+                  icon: Icons.storefront,
+                  color: Colors.green,
+                  onToggle: () => _toggleCapability('sell', !canSell),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Status Guide:',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                _buildStatusInfo('approved', 'Active - You can transact'),
+                _buildStatusInfo('pending', 'Awaiting approval'),
+                _buildStatusInfo('none', 'Not activated'),
+              ],
+            ),
+          );
+        },
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeCard({
+    required String title,
+    required bool isEnabled,
+    required String status,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onToggle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isEnabled ? color.withOpacity(0.1) : Colors.grey.withOpacity(0.1),
+        border: Border.all(
+          color: isEnabled ? color : Colors.grey,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  'Status: $status',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: _getStatusColor(status),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: isEnabled,
+            onChanged: (_) => onToggle(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusInfo(String status, String description) {
+    final color = _getStatusColor(status);
+    return Row(
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            '$status: $description',
+            style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'approved':
+        return Colors.green;
+      case 'pending':
+        return Colors.orange;
+      case 'none':
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Future<void> _toggleCapability(String type, bool enable) async {
+    setState(() => _isLoading = true);
+    try {
+      await widget.apiService.requestCapability(type);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$type capability ${enable ? 'enabled' : 'disabled'} - Pending approval'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      // Refresh the data
+      _capabilityFuture = widget.apiService.getUserCapabilities();
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
