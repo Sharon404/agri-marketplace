@@ -49,6 +49,11 @@ Route::middleware('auth:api')->prefix('user')->group(function () {
     Route::get('/capabilities', [UserController::class, 'getCapabilities']);
 });
 
+// Capability request route
+Route::middleware('auth:api')->prefix('capabilities')->group(function () {
+    Route::post('/request', [UserController::class, 'requestCapability']);
+});
+
 // Products - public read
 Route::apiResource('products', ProductController::class, ['only' => ['index', 'show']]);
 

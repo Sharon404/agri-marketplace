@@ -24,8 +24,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool showLoading = true}) async {
     try {
+      if (showLoading) {
+        setState(() => _isLoading = true);
+      }
+
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final role = authProvider.user?['role'];
 
@@ -97,6 +101,20 @@ class _HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Failed to load analytics: ${e.toString()}')),
         );
       }
+    }
+  }
+
+  /// Refresh data after user creates new content
+  Future<void> _refreshData() async {
+    print('Refreshing data...');
+    await _loadData(showLoading: false);
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Data updated'),
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -312,13 +330,21 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
+        onPressed: () async {
           // Navigate to create listing/request based on user role
           final role = authProvider.user?['role'];
           if (role == 'farmer') {
-            Navigator.pushNamed(context, '/create-listing');
+            final result = await Navigator.pushNamed(context, '/create-listing');
+            // Refresh if user created a listing (result == true)
+            if (result == true) {
+              _refreshData();
+            }
           } else if (role == 'buyer') {
-            Navigator.pushNamed(context, '/create-request');
+            final result = await Navigator.pushNamed(context, '/create-request');
+            // Refresh if user created a request (result == true)
+            if (result == true) {
+              _refreshData();
+            }
           }
         },
         tooltip: 'Create New',

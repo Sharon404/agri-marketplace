@@ -742,8 +742,12 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return jsonDecode(response.body);
       } else {
-        final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['message'] ?? 'Failed to request capability');
+        try {
+          final errorBody = jsonDecode(response.body);
+          throw Exception(errorBody['message'] ?? 'Failed to request capability');
+        } catch (_) {
+          throw Exception('Failed to request capability: Status ${response.statusCode}');
+        }
       }
     } catch (e) {
       print('Request capability error: $e');

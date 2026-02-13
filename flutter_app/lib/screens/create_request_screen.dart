@@ -332,7 +332,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Request created successfully!')),
         );
-        Navigator.pop(context);
+        // Return true to signal parent to refresh
+        Navigator.pop(context, true);
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),

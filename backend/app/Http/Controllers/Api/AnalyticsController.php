@@ -17,13 +17,11 @@ class AnalyticsController extends Controller
         try {
             $user = auth()->user();
 
-            // Get real market data based on buyer requests and listings
-            $products = Product::select('name')
-                ->withCount([
-                    'buyerRequests as demand_count',
-                    'farmerListings as supplier_count'
-                ])
-                ->whereHas('buyerRequests')
+            // OPTIMIZED: Simple counts without nested subqueries
+            // Get top products by buyer request count (fast query)
+            $products = Product::select('id', 'name')
+                ->withCount('buyerRequests as demand_count')
+                ->withCount('farmerListings as supplier_count')
                 ->orderBy('demand_count', 'desc')
                 ->limit(5)
                 ->get();
@@ -36,30 +34,26 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            // Get global verified buyers count using capability system
-            // Users with can_buy capability (includes role-based fallback in User model)
-            $totalVerifiedBuyers = User::whereHas('capability', function ($q) {
-                $q->where('can_buy', true)->where('status', 'active');
-            })->count() ?? 0;
+            // OPTIMIZED: Simple count without nested whereHas
+            // Users with can_buy=true (check capability table)
+            $totalVerifiedBuyers = DB::table('user_capabilities')
+                ->where('can_buy', true)
+                ->where('status', 'active')
+                ->count() ?? 0;
 
-            $marketHighlights = $products->map(function ($product) use ($totalVerifiedBuyers) {
-                $totalQuantity = BuyerRequest::whereHas('product', function ($q) use ($product) {
-                    $q->where('name', $product->name);
-                })->sum('quantity') ?? 0;
+            // OPTIMIZED: Get total quantity per product with simple join
+            $quantityByProduct = FarmerListing::select('product_id', DB::raw('SUM(quantity) as total_qty'))
+                ->where('is_active', true)
+                ->groupBy('product_id')
+                ->pluck('total_qty', 'product_id');
 
-                // Count unique verified buyers requesting this product (capability-based)
-                $buyersForProduct = User::whereHas('capability', function ($q) {
-                    $q->where('can_buy', true)->where('status', 'active');
-                })->whereHas('buyerRequests', function ($q) use ($product) {
-                    $q->whereHas('product', function ($subQ) use ($product) {
-                        $subQ->where('name', $product->name);
-                    })->where('is_active', true);
-                })->count() ?? 0;
+            $marketHighlights = $products->map(function ($product) use ($totalVerifiedBuyers, $quantityByProduct) {
+                $totalQuantity = $quantityByProduct[$product->id] ?? 0;
 
                 return [
                     'product' => $product->name,
                     'demand_level' => $product->demand_count > 8 ? 'High' : ($product->demand_count > 4 ? 'Medium' : 'Low'),
-                    'buyers_requesting' => $buyersForProduct > 0 ? $buyersForProduct : $product->demand_count,
+                    'buyers_requesting' => $product->demand_count,
                     'weekly_demand' => $totalQuantity . ' units',
                     'active_suppliers' => $product->supplier_count,
                     'verified_buyers_total' => $totalVerifiedBuyers,
@@ -90,12 +84,11 @@ class AnalyticsController extends Controller
         try {
             $user = auth()->user();
 
-            // Get real supply data based on farmer listings
-            $products = Product::select('name')
-                ->withCount([
-                    'farmerListings as supplier_count',
-                    'buyerRequests as demand_count'
-                ])
+            // OPTIMIZED: Simple counts without nested subqueries
+            // Get top products by farmer listing count (fast query)
+            $products = Product::select('id', 'name')
+                ->withCount('farmerListings as supplier_count')
+                ->withCount('buyerRequests as demand_count')
                 ->whereHas('farmerListings', function ($query) {
                     $query->where('is_active', true);
                 })
@@ -111,30 +104,26 @@ class AnalyticsController extends Controller
                 ]);
             }
 
-            // Get global verified farmers count using capability system
-            // Users with can_sell capability (includes role-based fallback in User model)
-            $totalVerifiedFarmers = User::whereHas('capability', function ($q) {
-                $q->where('can_sell', true)->where('status', 'active');
-            })->count() ?? 0;
+            // OPTIMIZED: Simple count without nested whereHas
+            // Users with can_sell=true (check capability table)
+            $totalVerifiedFarmers = DB::table('user_capabilities')
+                ->where('can_sell', true)
+                ->where('status', 'active')
+                ->count() ?? 0;
 
-            $supplyHighlights = $products->map(function ($product) use ($totalVerifiedFarmers) {
-                $totalQuantity = FarmerListing::whereHas('product', function ($q) use ($product) {
-                    $q->where('name', $product->name);
-                })->where('is_active', true)->sum('quantity') ?? 0;
+            // OPTIMIZED: Get total quantity per product with simple join
+            $quantityByProduct = FarmerListing::select('product_id', DB::raw('SUM(quantity) as total_qty'))
+                ->where('is_active', true)
+                ->groupBy('product_id')
+                ->pluck('total_qty', 'product_id');
 
-                // For each product, count unique approved suppliers (capability-based)
-                $suppliersForProduct = User::whereHas('capability', function ($q) {
-                    $q->where('can_sell', true)->where('status', 'active');
-                })->whereHas('farmerListings', function ($q) use ($product) {
-                    $q->whereHas('product', function ($subQ) use ($product) {
-                        $subQ->where('name', $product->name);
-                    })->where('is_active', true);
-                })->count() ?? 0;
+            $supplyHighlights = $products->map(function ($product) use ($totalVerifiedFarmers, $quantityByProduct) {
+                $totalQuantity = $quantityByProduct[$product->id] ?? 0;
 
                 return [
                     'product' => $product->name,
                     'supply_availability' => $totalQuantity . ' units',
-                    'verified_farmers' => $suppliersForProduct > 0 ? $suppliersForProduct : $product->supplier_count,
+                    'verified_farmers' => $product->supplier_count,
                     'verified_farmers_total' => $totalVerifiedFarmers,
                     'delivery_coverage' => 'Multiple Regions',
                     'reliability_stats' => '95% on-time deliveries',
@@ -157,7 +146,6 @@ class AnalyticsController extends Controller
                 'message' => null
             ]);
         }
-    }
 
     private function getMarketHighlights()
     {
