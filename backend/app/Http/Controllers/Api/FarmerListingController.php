@@ -28,8 +28,23 @@ class FarmerListingController extends Controller
      */
     public function index(Request $request)
     {
-        // Get listings from database with product relation
-        $listings = FarmerListing::with('product')->where('is_active', true)->get();
+        // Check if this is an authenticated request (from farmer viewing their own listings)
+        $user = auth('api')->user();
+        
+        if ($user && $user->role === 'farmer') {
+            // Show only the farmer's own listings
+            $listings = FarmerListing::with('product')
+                ->where('farmer_id', $user->id)
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Public view or non-farmer view - show all active listings
+            $listings = FarmerListing::with('product')
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         return response()->json([
             'data' => $listings,

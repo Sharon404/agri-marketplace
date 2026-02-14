@@ -28,8 +28,23 @@ class BuyerRequestController extends Controller
      */
     public function index(Request $request)
     {
-        // Get requests from database with product relation
-        $requests = BuyerRequest::with('product')->where('is_active', true)->get();
+        // Check if this is an authenticated request (from buyer viewing their own requests)
+        $user = auth('api')->user();
+        
+        if ($user && $user->role === 'buyer') {
+            // Show only the buyer's own requests
+            $requests = BuyerRequest::with('product')
+                ->where('buyer_id', $user->id)
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        } else {
+            // Public view or non-buyer view - show all active requests
+            $requests = BuyerRequest::with('product')
+                ->where('is_active', true)
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
 
         return response()->json([
             'data' => $requests,

@@ -134,6 +134,8 @@ class ApiService {
     final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
     final url = queryParams.isNotEmpty ? '$baseUrl/farmer-listings?$queryParams' : '$baseUrl/farmer-listings';
 
+    print('Fetching farmer listings from: $url');
+
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -142,10 +144,14 @@ class ApiService {
       },
     );
 
+    print('Farmer listings response status: ${response.statusCode}');
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      print('Farmer listings data: ${data['data']?.length ?? 0} items');
       return data['data'] ?? [];
     } else {
+      print('Farmer listings error: ${response.statusCode} - ${response.body}');
       throw Exception('Failed to load listings: ${response.statusCode} - ${response.body}');
     }
   }
@@ -159,6 +165,8 @@ class ApiService {
     final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
     final url = queryParams.isNotEmpty ? '$baseUrl/buyer-requests?$queryParams' : '$baseUrl/buyer-requests';
 
+    print('Fetching buyer requests from: $url');
+
     final response = await http.get(
       Uri.parse(url),
       headers: {
@@ -167,10 +175,14 @@ class ApiService {
       },
     );
 
+    print('Buyer requests response status: ${response.statusCode}');
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
+      print('Buyer requests data: ${data['data']?.length ?? 0} items');
       return data['data'];
     } else {
+      print('Buyer requests error: ${response.statusCode} - ${response.body}');
       throw Exception('Failed to load requests');
     }
   }
