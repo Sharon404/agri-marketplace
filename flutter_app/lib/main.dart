@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
-import 'providers/deals_provider.dart';
-import 'screens/login_screen.dart';
-import 'screens/register_screen.dart';
+import 'providers/cart_provider.dart';
+import 'providers/order_provider.dart';
+import 'providers/product_provider.dart';
+import 'repositories/auth_repository.dart';
+import 'repositories/cart_repository.dart';
+import 'repositories/order_repository.dart';
+import 'repositories/product_repository.dart';
 import 'screens/home_screen.dart';
-import 'screens/create_listing_screen.dart';
-import 'screens/create_request_screen.dart';
-import 'screens/create_supply_screen.dart';
-import 'screens/activation_screen.dart';
-import 'screens/deals_list_screen.dart';
-import 'screens/farmer_supplies_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/orders_screen.dart';
+import 'screens/register_screen.dart';
+import 'screens/seller_dashboard_screen.dart';
+import 'services/api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  final authProvider = AuthProvider();
-  
-  try {
-    await authProvider.checkAuthStatus();
-    print('✓ Auth status check completed');
-  } catch (e, stackTrace) {
-    print('✗ Error checking auth status: $e');
-    print('Stack trace: $stackTrace');
-  }
-  
+  final apiService = ApiService();
+  final authRepository = AuthRepository(apiService);
+  final productRepository = ProductRepository(apiService);
+  final cartRepository = CartRepository(apiService);
+  final orderRepository = OrderRepository(apiService);
+
+  final authProvider = AuthProvider(authRepository);
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => authProvider),
-        ChangeNotifierProvider(create: (_) => DealsProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider(productRepository)),
+        ChangeNotifierProvider(create: (_) => CartProvider(cartRepository)),
+        ChangeNotifierProvider(create: (_) => OrderProvider(orderRepository)),
       ],
       child: const AgriMarketplaceApp(),
     ),
@@ -51,24 +54,18 @@ class AgriMarketplaceApp extends StatelessWidget {
       ),
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
-          print('Building home screen - authenticated: ${auth.isAuthenticated}');
           if (auth.isAuthenticated) {
             return const HomeScreen();
-          } else {
-            return const LoginScreen();
           }
+          return const LoginScreen();
         },
       ),
       routes: {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
-        '/create-listing': (context) => const CreateListingScreen(),
-        '/create-request': (context) => const CreateRequestScreen(),
-        '/create-supply': (context) => const CreateSupplyScreen(),
-        '/activation': (context) => const ActivationScreen(),
-        '/deals': (context) => const DealsListScreen(),
-        '/farmer-supplies': (context) => const FarmerSuppliesScreen(),
+        '/orders': (context) => const OrdersScreen(),
+        '/seller-dashboard': (context) => const SellerDashboardScreen(),
       },
     );
   }

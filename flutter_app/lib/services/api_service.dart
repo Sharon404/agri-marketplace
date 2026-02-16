@@ -1,769 +1,131 @@
-import 'dart:convert';
-import 'dart:async';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  // Base URL can be overridden at build time with --dart-define=API_BASE_URL=...
-  static const String _envBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+  ApiService({Dio? dio}) : _dio = dio ?? Dio() {
+    _dio.options = BaseOptions(
+      baseUrl: _baseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+    );
 
-  static String get baseUrl {
-    if (_envBaseUrl.isNotEmpty) {
-      return _envBaseUrl;
-    }
-
-    if (kIsWeb) {
-      return 'http://localhost:8000/api';
-    }
-
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://10.0.2.2:8000/api';
-      default:
-        return 'http://localhost:8000/api';
-    }
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) async {
+        final token = await _getToken();
+        if (token != null && token.isNotEmpty) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
+        options.headers['Accept'] = 'application/json';
+        return handler.next(options);
+      },
+      onError: (error, handler) {
+        return handler.next(error);
+      },
+    ));
   }
+
+  static const String _baseUrl = 'http://localhost:8000/api';
+
+  final Dio _dio;
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'password': password,
-        }),
-      ).timeout(const Duration(seconds: 20));
+    final response = await _dio.post('/login', data: {
+      'email': email,
+      'password': password,
+    });
 
-      print('Login response status: ${response.statusCode}');
-      print('Login response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Login failed: Status ${response.statusCode}');
-      }
-    } on TimeoutException {
-      throw Exception('Login timeout: Backend server not responding');
-    } catch (e) {
-      throw Exception('Login error: ${e.toString()}');
-    }
+    return _handleAuthResponse(response.data);
   }
 
-  Future<Map<String, dynamic>> register(String name, String email, String phone, String password, String role) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'name': name,
-          'email': email,
-          'phone': phone,
-          'password': password,
-          'password_confirmation': password,
-          'role': role,
-        }),
-      ).timeout(const Duration(seconds: 20));
+  Future<Map<String, dynamic>> register(Map<String, dynamic> payload) async {
+    final response = await _dio.post('/register', data: payload);
 
-      print('Register response status: ${response.statusCode}');
-      print('Register response body: ${response.body}');
-
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else if (response.statusCode == 422) {
-        // Validation error - parse and format error messages
-        final errorBody = jsonDecode(response.body);
-        if (errorBody is Map<String, dynamic>) {
-          // Extract validation errors
-          final errors = <String>[];
-          errorBody.forEach((key, value) {
-            if (value is List && value.isNotEmpty) {
-              errors.add(value.first.toString());
-            } else if (value is String) {
-              errors.add(value);
-            }
-          });
-          final errorMessage = errors.isNotEmpty ? errors.join('\n') : 'Validation failed';
-          throw Exception(errorMessage);
-        }
-        throw Exception('Validation failed: ${response.body}');
-      } else {
-        // Try to parse as JSON, fallback to plain text
-        try {
-          final errorBody = jsonDecode(response.body);
-          final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
-          throw Exception('Registration failed: $errorMessage (Status: ${response.statusCode})');
-        } catch (e) {
-          throw Exception('Registration failed: Status ${response.statusCode}');
-        }
-      }
-    } on TimeoutException {
-      throw Exception('Registration timeout: Backend server not responding');
-    } catch (e) {
-      if (e is Exception) rethrow;
-      throw Exception('Registration error: ${e.toString()}');
-    }
+    return _handleAuthResponse(response.data);
   }
 
   Future<void> logout() async {
+    await _dio.post('/logout');
+    await _clearToken();
+  }
+
+  Future<Response<dynamic>> getProducts() async {
+    return _dio.get('/products');
+  }
+
+  Future<Response<dynamic>> getProductById(int id) async {
+    return _dio.get('/products/$id');
+  }
+
+  Future<Response<dynamic>> addToCart(int productId, int quantity) async {
+    return _dio.post('/cart/items', data: {
+      'product_id': productId,
+      'quantity': quantity,
+    });
+  }
+
+  Future<Response<dynamic>> getCart() async {
+    return _dio.get('/cart');
+  }
+
+  Future<Response<dynamic>> updateCartItem(int cartItemId, int quantity) async {
+    return _dio.put('/cart/items/$cartItemId', data: {
+      'quantity': quantity,
+    });
+  }
+
+  Future<Response<dynamic>> removeCartItem(int cartItemId) async {
+    return _dio.delete('/cart/items/$cartItemId');
+  }
+
+  Future<Response<dynamic>> clearCart() async {
+    return _dio.delete('/cart');
+  }
+
+  Future<Response<dynamic>> checkout(String paymentMethod) async {
+    return _dio.post('/checkout', data: {
+      'payment_method': paymentMethod,
+    });
+  }
+
+  Future<Response<dynamic>> getOrders() async {
+    return _dio.get('/orders');
+  }
+
+  Future<Response<dynamic>> getSellerOrders() async {
+    return _dio.get('/seller/orders');
+  }
+
+  Future<Response<dynamic>> getSellerProfile() async {
+    return _dio.get('/seller/profile');
+  }
+
+  Future<Response<dynamic>> updateSellerProfile(Map<String, dynamic> payload) async {
+    return _dio.patch('/seller/profile', data: payload);
+  }
+
+  Future<Map<String, dynamic>> _handleAuthResponse(dynamic data) async {
+    if (data is! Map<String, dynamic> || data['access_token'] == null) {
+      throw Exception('Invalid auth response');
+    }
+
+    final token = data['access_token'] as String;
+    await _setToken(token);
+
+    return data;
+  }
+
+  Future<void> _setToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token != null) {
-      final response = await http.post(
-        Uri.parse('$baseUrl/logout'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Logout failed');
-      }
-    }
+    await prefs.setString('auth_token', token);
   }
 
-  Future<List<dynamic>> getFarmerListings({Map<String, String>? filters}) async {
+  Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
-    final url = queryParams.isNotEmpty ? '$baseUrl/farmer-listings?$queryParams' : '$baseUrl/farmer-listings';
-
-    print('Fetching farmer listings from: $url');
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    print('Farmer listings response status: ${response.statusCode}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print('Farmer listings data: ${data['data']?.length ?? 0} items');
-      return data['data'] ?? [];
-    } else {
-      print('Farmer listings error: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to load listings: ${response.statusCode} - ${response.body}');
-    }
+    return prefs.getString('auth_token');
   }
 
-  Future<List<dynamic>> getBuyerRequests({Map<String, String>? filters}) async {
+  Future<void> _clearToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
-    final url = queryParams.isNotEmpty ? '$baseUrl/buyer-requests?$queryParams' : '$baseUrl/buyer-requests';
-
-    print('Fetching buyer requests from: $url');
-
-    final response = await http.get(
-      Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    print('Buyer requests response status: ${response.statusCode}');
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      print('Buyer requests data: ${data['data']?.length ?? 0} items');
-      return data['data'];
-    } else {
-      print('Buyer requests error: ${response.statusCode} - ${response.body}');
-      throw Exception('Failed to load requests');
-    }
-  }
-
-  Future<List<dynamic>> getProducts() async {
-    try {
-      // Products endpoint is public, but try to use token if available
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      final headers = {
-        'Content-Type': 'application/json',
-        if (token != null) 'Authorization': 'Bearer $token',
-      };
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/products'),
-        headers: headers,
-      ).timeout(const Duration(seconds: 20));
-
-      print('Products response status: ${response.statusCode}');
-      print('Products response body: ${response.body}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is List) {
-          return decoded;
-        }
-        if (decoded is Map<String, dynamic>) {
-          if (decoded['data'] is List) {
-            return decoded['data'] as List<dynamic>;
-          }
-          if (decoded['products'] is List) {
-            return decoded['products'] as List<dynamic>;
-          }
-        }
-        return [];
-      } else {
-        throw Exception('Failed to load products: ${response.statusCode}');
-      }
-    } on TimeoutException {
-      throw Exception('Products timeout: Backend server not responding');
-    } catch (e) {
-      throw Exception('Products error: ${e.toString()}');
-    }
-  }
-
-  Future<Map<String, dynamic>> createFarmerListing(Map<String, dynamic> listingData) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/farmer-listings'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(listingData),
-    );
-
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      try {
-        final errorBody = jsonDecode(response.body);
-        final errorMessage = errorBody is Map ? errorBody.toString() : response.body;
-        throw Exception('Failed to create listing: $errorMessage (Status: ${response.statusCode})');
-      } catch (_) {
-        throw Exception('Failed to create listing: Status ${response.statusCode}');
-      }
-    }
-  }
-
-  Future<Map<String, dynamic>> createBuyerRequest(Map<String, dynamic> requestData) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.post(
-      Uri.parse('$baseUrl/buyer-requests'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(requestData),
-    );
-
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to create request');
-    }
-  }
-
-  // Admin API methods
-  Future<Map<String, dynamic>> getAdminDashboard() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/admin/dashboard'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        // Handle consistent API response structure {success, data, message}
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>;
-        }
-        return decoded;
-      } else {
-        throw Exception('Failed to load admin dashboard: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Admin dashboard error: $e');
-      // Return empty stats instead of crashing
-      return {
-        'total_users': 0,
-        'total_farmers': 0,
-        'total_buyers': 0,
-        'total_listings': 0,
-        'total_requests': 0,
-        'total_products': 0,
-      };
-    }
-  }
-
-  Future<List<dynamic>> getAdminListings() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/admin/deals'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['deals']['data'] ?? [];
-    } else {
-      throw Exception('Failed to load admin listings: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  Future<List<dynamic>> getAdminRequests() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-
-    if (token == null) throw Exception('Not authenticated');
-
-    final response = await http.get(
-      Uri.parse('$baseUrl/admin/deals'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['deals']['data'] ?? [];
-    } else {
-      throw Exception('Failed to load admin requests: ${response.statusCode} - ${response.body}');
-    }
-  }
-
-  // Analytics methods for farmers and buyers
-  Future<Map<String, dynamic>> getFarmerAnalytics() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/farmer/analytics'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Farmer analytics response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        // Handle consistent API response structure {success, data, message}
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>;
-        }
-        return decoded;
-      } else {
-        throw Exception('Farmer analytics failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Farmer analytics error: $e');
-      // Return empty data instead of crashing
-      return {'market_highlights': []};
-    }
-  }
-
-  Future<Map<String, dynamic>> getBuyerAnalytics() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/buyer/analytics'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Buyer analytics response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        // Handle consistent API response structure {success, data, message}
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>;
-        }
-        return decoded;
-      } else {
-        throw Exception('Buyer analytics failed: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Buyer analytics error: $e');
-      // Return empty data instead of crashing
-      return {'supply_highlights': []};
-    }
-  }
-
-  // PHASE 2: Managed Marketplace Deal Methods
-  
-  /// Get all deals for the authenticated user
-  Future<List<dynamic>> getDeals({String? status}) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      String url = '$baseUrl/deals';
-      if (status != null && status.isNotEmpty) {
-        url += '?status=$status';
-      }
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Get deals response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        // Handle both paginated and non-paginated responses
-        if (data is Map && data.containsKey('data')) {
-          return data['data'] ?? [];
-        }
-        return data is List ? data : [];
-      } else {
-        throw Exception('Failed to load deals: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get deals error: $e');
-      rethrow;
-    }
-  }
-
-  /// Get a specific deal by ID
-  Future<Map<String, dynamic>> getDeal(int dealId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/deals/$dealId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Get deal response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to load deal: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get deal error: $e');
-      rethrow;
-    }
-  }
-
-  /// Accept a deal (for buyer or farmer)
-  /// Buyer accepts when status = pending_buyer_confirmation
-  /// Farmer accepts when status = pending_farmer_confirmation
-  Future<Map<String, dynamic>> acceptDeal(int dealId, {String? notes}) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final body = {
-        if (notes != null && notes.isNotEmpty) 'notes': notes,
-      };
-
-      final response = await http.patch(
-        Uri.parse('$baseUrl/deals/$dealId/accept'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
-
-      print('Accept deal response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        final errorBody = jsonDecode(response.body);
-        throw Exception('Failed to accept deal: ${errorBody['error'] ?? response.statusCode}');
-      }
-    } catch (e) {
-      print('Accept deal error: $e');
-      rethrow;
-    }
-  }
-
-  /// Reject a deal (for buyer or farmer)
-  /// Can only reject in confirmation phases: pending_buyer_confirmation, pending_farmer_confirmation
-  Future<Map<String, dynamic>> rejectDeal(int dealId, {String? reason}) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final body = {
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      };
-
-      final response = await http.patch(
-        Uri.parse('$baseUrl/deals/$dealId/reject'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
-
-      print('Reject deal response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        final errorBody = jsonDecode(response.body);
-        throw Exception('Failed to reject deal: ${errorBody['error'] ?? response.statusCode}');
-      }
-    } catch (e) {
-      print('Reject deal error: $e');
-      rethrow;
-    }
-  }
-
-  /// Get deal statistics for the authenticated user
-  Future<Map<String, dynamic>> getDealStatistics() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/deals/statistics'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Deal statistics response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        throw Exception('Failed to load deal statistics: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Deal statistics error: $e');
-      rethrow;
-    }
-  }
-
-  /// Get farmer supplies (available for admin matching)
-  Future<List<dynamic>> getFarmerSupplies({Map<String, String>? filters}) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final queryParams = filters != null ? Uri(queryParameters: filters).query : '';
-      final url = queryParams.isNotEmpty ? '$baseUrl/supplies?$queryParams' : '$baseUrl/supplies';
-
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Get farmer supplies response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map && data.containsKey('data')) {
-          return data['data'] ?? [];
-        }
-        return data is List ? data : [];
-      } else {
-        throw Exception('Failed to load farmer supplies: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get farmer supplies error: $e');
-      rethrow;
-    }
-  }
-
-  /// Create a farmer supply (farmers submit availability)
-  Future<Map<String, dynamic>> createFarmerSupply(Map<String, dynamic> supplyData) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/supplies'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(supplyData),
-      ).timeout(const Duration(seconds: 10));
-
-      print('Create farmer supply response status: ${response.statusCode}');
-
-      if (response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        final errorBody = jsonDecode(response.body);
-        throw Exception('Failed to create supply: ${errorBody['message'] ?? response.statusCode}');
-      }
-    } catch (e) {
-      print('Create farmer supply error: $e');
-      rethrow;
-    }
-  }
-
-  /// Get available supplies (public endpoint)
-  Future<List<dynamic>> getAvailableSupplies() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/supplies/available'),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Get available supplies response status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data is Map && data.containsKey('data')) {
-          return data['data'] ?? [];
-        }
-        return data is List ? data : [];
-      } else {
-        throw Exception('Failed to load available supplies: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get available supplies error: $e');
-      rethrow;
-    }
-  }
-
-  /// Get user's current capabilities (for mode switching)
-  Future<Map<String, dynamic>> getUserCapabilities() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.get(
-        Uri.parse('$baseUrl/user/capabilities'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      ).timeout(const Duration(seconds: 10));
-
-      print('Get user capabilities status: ${response.statusCode}');
-
-      if (response.statusCode == 200) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic> && decoded.containsKey('data')) {
-          return decoded['data'] as Map<String, dynamic>;
-        }
-        return decoded;
-      } else {
-        throw Exception('Failed to get capabilities: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Get user capabilities error: $e');
-      rethrow;
-    }
-  }
-
-  /// Request a capability (buy or sell)
-  Future<Map<String, dynamic>> requestCapability(String capabilityType) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('token');
-
-      if (token == null) throw Exception('Not authenticated');
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/capabilities/request'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'capability': capabilityType}),
-      ).timeout(const Duration(seconds: 10));
-
-      print('Request capability status: ${response.statusCode}');
-
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        return jsonDecode(response.body);
-      } else {
-        try {
-          final errorBody = jsonDecode(response.body);
-          throw Exception(errorBody['message'] ?? 'Failed to request capability');
-        } catch (_) {
-          throw Exception('Failed to request capability: Status ${response.statusCode}');
-        }
-      }
-    } catch (e) {
-      print('Request capability error: $e');
-      rethrow;
-    }
+    await prefs.remove('auth_token');
   }
 }

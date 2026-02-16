@@ -10,11 +10,6 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
-        then: function () {
-            Route::middleware(['auth:api', 'role:admin'])
-                ->prefix('admin')
-                ->group(base_path('routes/admin.php'));
-        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Enable CORS for API
@@ -22,12 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
         
-        $middleware->alias([
-            'role' => \App\Http\Middleware\RoleMiddleware::class,
-            'admin' => \App\Http\Middleware\AdminMiddleware::class,
-            'require.email.verified' => \App\Http\Middleware\RequireEmailVerified::class,
-            'capability' => \App\Http\Middleware\CapabilityMiddleware::class,
-        ]);
+        $middleware->alias([]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
