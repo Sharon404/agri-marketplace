@@ -20,9 +20,6 @@ class RegisterRequest extends FormRequest
             'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'string', 'min:8'],
             'role' => ['nullable', 'in:buyer,seller'],
-            'business_name' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'logo_url' => ['nullable', 'url', 'max:2048'],
         ];
     }
 }

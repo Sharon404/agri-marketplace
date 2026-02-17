@@ -18,34 +18,51 @@ class AuthController extends Controller
 {
     public function register(RegisterRequest $request)
     {
-        $data = $request->validated();
+        // DEBUG: Log that we received the request
+        error_log("DEBUG: register() called");
+        
+        try {
+            $data = $request->validated();
+            error_log("DEBUG: validation passed");
+            
+            $user = User::create([
+                'first_name' => $data['first_name'],
+                'last_name' => $data['last_name'],
+                'email' => $data['email'],
+                'phone' => $data['phone'],
+                'password' => $data['password'],
+                'role' => $data['role'] ?? 'buyer',
+                'status' => 'active',
+            ]);
+            
+            error_log("DEBUG: user created with id " . $user->id);
+            
+            // Only support buyer registration via /register
+            if ($user->role !== 'buyer') {
+                $user->delete();
+                return response()->json([
+                    'message' => 'Sellers must use the /register/seller endpoint',
+                    'error' => 'invalid_role',
+                ], 400);
+            }
 
-        $user = User::create([
-            'first_name' => $data['first_name'],
-            'last_name' => $data['last_name'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'password' => $data['password'],
-            'role' => $data['role'] ?? 'buyer',
-            'status' => 'active',
-        ]);
-
-        // Buyers don't need seller profile
-        if ($user->role !== 'seller') {
             $token = $user->createToken('api')->plainTextToken;
+            error_log("DEBUG: token created");
+            
             return response()->json([
                 'message' => 'Registration successful',
                 'user' => new UserResource($user),
                 'access_token' => $token,
                 'token_type' => 'bearer',
             ], 201);
+            
+        } catch (\Throwable $e) {
+            error_log("DEBUG: Exception in register - " . $e->getMessage());
+            return response()->json([
+                'message' => 'Registration failed',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        // Sellers must use registerSeller() for verification
-        $user->delete();
-        throw ValidationException::withMessages([
-            'role' => 'Use the seller registration endpoint for seller accounts.',
-        ]);
     }
 
     public function registerSeller(SellerVerificationRequest $request)
