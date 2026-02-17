@@ -33,17 +33,56 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role !== 'admin' && $order->buyer_id !== $user->id) {
-            return response()->json(['message' => 'Not authorized.'], 403);
+        // Admin can update any order
+        if ($user->role === 'admin') {
+            $data = $request->validated();
+            $order->update([
+                'status' => $data['status'],
+                'payment_status' => $data['payment_status'] ?? $order->payment_status,
+            ]);
+            return new OrderResource($order->load(['items.product', 'payment']));
         }
 
-        $data = $request->validated();
+        // Buyer can only cancel their own order
+        if ($user->role === 'buyer') {
+            if ($order->buyer_id !== $user->id) {
+                return response()->json(['message' => 'Not authorized.'], 403);
+            }
+            $data = $request->validated();
+            if ($data['status'] !== 'cancelled') {
+                return response()->json(['message' => 'Buyers can only cancel orders.'], 422);
+            }
+            $order->update([
+                'status' => 'cancelled',
+                'payment_status' => $data['payment_status'] ?? $order->payment_status,
+            ]);
+            return new OrderResource($order->load(['items.product', 'payment']));
+        }
 
-        $order->update([
-            'status' => $data['status'],
-            'payment_status' => $data['payment_status'] ?? $order->payment_status,
-        ]);
+        // Seller can only transition items they own (ship, deliver, refund)
+        if ($user->role === 'seller' && $user->sellerProfile) {
+            $sellerOwnsItems = $order->items()
+                ->where('seller_id', $user->sellerProfile->id)
+                ->exists();
 
-        return new OrderResource($order->load(['items.product', 'payment']));
+            if (!$sellerOwnsItems) {
+                return response()->json(['message' => 'Seller does not own items in this order.'], 403);
+            }
+
+            $data = $request->validated();
+            $allowedStatuses = ['shipped', 'delivered', 'refunded'];
+
+            if (!in_array($data['status'], $allowedStatuses)) {
+                return response()->json(['message' => 'Sellers can only set shipped, delivered, or refunded.'], 422);
+            }
+
+            $order->update([
+                'status' => $data['status'],
+                'payment_status' => $data['payment_status'] ?? $order->payment_status,
+            ]);
+            return new OrderResource($order->load(['items.product', 'payment']));
+        }
+
+        return response()->json(['message' => 'Not authorized.'], 403);
     }
 }

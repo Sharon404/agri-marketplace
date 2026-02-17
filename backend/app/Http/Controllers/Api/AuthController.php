@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CreateAdminRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
@@ -75,6 +76,26 @@ class AuthController extends Controller
             'access_token' => $token,
             'token_type' => 'bearer',
         ]);
+    }
+
+    public function createAdmin(CreateAdminRequest $request)
+    {
+        $data = $request->validated();
+
+        $user = User::create([
+            'first_name' => $data['first_name'],
+            'last_name' => $data['last_name'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'password' => $data['password'],
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+
+        return response()->json([
+            'message' => 'Admin user created successfully',
+            'user' => new UserResource($user),
+        ], 201);
     }
 
     public function logout(Request $request)

@@ -4,11 +4,11 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterRequest extends FormRequest
+class CreateAdminRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return $this->user() && $this->user()->role === 'admin';
     }
 
     public function rules(): array
@@ -19,10 +19,6 @@ class RegisterRequest extends FormRequest
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['nullable', 'in:buyer,seller'],
-            'business_name' => ['nullable', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'logo_url' => ['nullable', 'url', 'max:2048'],
         ];
     }
 }

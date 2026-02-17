@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
@@ -24,7 +25,28 @@ class ApiService {
     ));
   }
 
-  static const String _baseUrl = 'http://localhost:8000/api';
+  /// Determine base URL based on platform and environment
+  /// Use environment variable API_BASE_URL to override: --dart-define=API_BASE_URL=http://example.com/api
+  static String get _baseUrl {
+    // Check for explicit environment override
+    const envBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: '');
+    if (envBaseUrl.isNotEmpty) {
+      return envBaseUrl;
+    }
+
+    // Web always uses localhost
+    if (kIsWeb) {
+      return 'http://localhost:8000/api';
+    }
+
+    // Android emulator uses 10.0.2.2 to reach host machine
+    // Physical Android devices would use actual server IP
+    // For dev, use 10.0.2.2:8000; for production, use actual server domain
+    return 'http://10.0.2.2:8000/api';
+    
+    // iOS simulator: http://localhost:8000/api (mapped via XCode)
+    // iOS physical: http://your-server-domain.com/api
+  }
 
   final Dio _dio;
 
