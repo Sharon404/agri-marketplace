@@ -65,6 +65,12 @@ class ApiService {
     return _handleAuthResponse(response.data);
   }
 
+  Future<Map<String, dynamic>> registerSeller(Map<String, dynamic> payload) async {
+    final response = await _dio.post('/register/seller', data: payload);
+
+    return _handleAuthResponse(response.data);
+  }
+
   Future<void> logout() async {
     await _dio.post('/logout');
     await _clearToken();

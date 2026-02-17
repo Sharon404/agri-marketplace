@@ -16,6 +16,11 @@ class AuthRepository {
     return UserModel.fromJson(data['user'] as Map<String, dynamic>);
   }
 
+  Future<UserModel> registerSeller(Map<String, dynamic> payload) async {
+    final data = await _apiService.registerSeller(payload);
+    return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+  }
+
   Future<void> logout() async {
     await _apiService.logout();
   }

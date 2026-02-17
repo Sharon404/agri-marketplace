@@ -40,6 +40,15 @@ class ProductController extends Controller
             return response()->json(['message' => 'Seller profile required.'], 403);
         }
 
+        // HIGH SCRUTINY: Block unverified sellers from listing products
+        if (!$user->sellerProfile->isVerified()) {
+            return response()->json([
+                'message' => 'Your seller account is pending verification. You cannot list products yet.',
+                'status' => $user->sellerProfile->verification_status,
+                'rejection_reason' => $user->sellerProfile->rejection_reason,
+            ], 403);
+        }
+
         $data = $request->validated();
 
         $product = Product::create([

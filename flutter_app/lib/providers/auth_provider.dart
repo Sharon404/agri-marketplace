@@ -40,6 +40,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> registerSeller(Map<String, dynamic> payload) async {
+    _setLoading(true);
+    try {
+      _user = await _authRepository.registerSeller(payload);
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<void> logout() async {
     _setLoading(true);
     try {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
@@ -9,6 +10,7 @@ use App\Http\Controllers\Api\SellerController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register/seller', [AuthController::class, 'registerSeller']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/products', [ProductController::class, 'index']);
@@ -19,6 +21,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin-only: create other admins
     Route::post('/admin/create', [AuthController::class, 'createAdmin']);
+
+    // Admin-only: seller verification endpoints
+    Route::get('/admin/sellers/pending', [AdminController::class, 'pendingSellers']);
+    Route::get('/admin/sellers', [AdminController::class, 'allSellers']);
+    Route::patch('/admin/sellers/{seller}/verify', [AdminController::class, 'verifySeller']);
+    Route::patch('/admin/sellers/{seller}/reject', [AdminController::class, 'rejectSeller']);
 
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{product}', [ProductController::class, 'update']);

@@ -17,5 +17,5 @@ return [
         'validate_csrf_token' => Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class,
     ],
 
-    'prefix' => Sanctum::prefix(),
+    'prefix' => env('SANCTUM_PREFIX', 'sanctum'),
 ];
