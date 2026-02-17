@@ -32,7 +32,7 @@ class SellerVerificationPendingScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(40),
                   ),
                   child: Icon(
-                    Icons.scheduled,
+                    Icons.schedule,
                     size: 40,
                     color: Colors.orange[700],
                   ),

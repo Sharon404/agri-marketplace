@@ -74,7 +74,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'bank_name': _bankNameController.text.trim(),
         'bank_account_name': _bankAccountNameController.text.trim(),
         'bank_account_number': _bankAccountNumberController.text.trim(),
-        'terms_accepted': _termsAccepted,
+        'terms_accepted': _termsAccepted.toString(),
       });
       await authProvider.registerSeller(data);
     } else {
