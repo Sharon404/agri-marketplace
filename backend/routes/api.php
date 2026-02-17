@@ -9,6 +9,11 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SellerController;
 use Illuminate\Support\Facades\Route;
 
+// Health check - minimal request to test server is responsive
+Route::get('/health', function () {
+    return response()->json(['status' => 'ok'], 200);
+});
+
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/register/seller', [AuthController::class, 'registerSeller']);
 Route::post('/login', [AuthController::class, 'login']);
