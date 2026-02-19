@@ -9,7 +9,19 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SellerController;
 use Illuminate\Support\Facades\Route;
 
-// Health check - minimal request to test server is responsive
+// Ultra-minimal test endpoints - bypass all middleware
+Route::get('/ping', function () {
+    return 'pong';
+});
+
+Route::get('/test', function () {
+    return response()->json(['message' => 'Server is responding', 'time' => now()]);
+});
+
+Route::post('/test-echo', function () {
+    return response()->json(['echo' => request()->all()]);
+});
+
 Route::get('/health', function () {
     return response()->json(['status' => 'ok'], 200);
 });

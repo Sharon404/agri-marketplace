@@ -24,5 +24,21 @@ WORKDIR /var/www/html
 # Copy only composer files to leverage Docker cache for composer install
 COPY composer.json composer.lock ./
 
-# Default command will run artisan serve (dev). For production use PHP-FPM + Nginx.
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# Install PHP dependencies
+RUN composer install --prefer-dist --no-scripts --no-progress --no-interaction && \
+    composer clear-cache
+
+# Copy application code
+COPY . .
+
+# Fix permissions
+RUN chown -R www-data:www-data /var/www/html && \
+    chmod -R 755 /var/www/html && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Run artisan post-install commands
+RUN composer run-script post-autoload-dump && \
+    composer run-script post-install-cmd
+
+# Start PHP-FPM (not artisan serve)
+CMD ["php-fpm"]
