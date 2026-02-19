@@ -31,14 +31,11 @@ RUN composer install --prefer-dist --no-scripts --no-progress --no-interaction &
 # Copy application code
 COPY . .
 
-# Fix permissions
-RUN chown -R www-data:www-data /var/www/html && \
+# Create necessary directories if they don't exist
+RUN mkdir -p storage/app storage/framework storage/logs bootstrap/cache && \
+    chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
-
-# Run artisan post-install commands
-RUN composer run-script post-autoload-dump && \
-    composer run-script post-install-cmd
 
 # Start PHP-FPM (not artisan serve)
 CMD ["php-fpm"]
