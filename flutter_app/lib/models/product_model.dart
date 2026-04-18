@@ -41,10 +41,10 @@ class ProductModel {
       categoryId: json['category_id'] as int,
       name: json['name'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? 0.0,
-      minimumOrderQuantity: json['minimum_order_quantity'] as int? ?? 1,
-      stockQuantity: json['stock_quantity'] as int? ?? 0,
-      weightPerUnit: (json['weight_per_unit'] as num?)?.toDouble(),
+      price: _toDouble(json['price']) ?? 0.0,
+      minimumOrderQuantity: _toInt(json['minimum_order_quantity']) ?? 1,
+      stockQuantity: _toInt(json['stock_quantity']) ?? 0,
+      weightPerUnit: _toDouble(json['weight_per_unit']),
       isActive: json['is_active'] as bool? ?? true,
       sellerProfile: json['seller_profile'] != null
           ? SellerModel.fromJson(json['seller_profile'] as Map<String, dynamic>)
@@ -53,13 +53,30 @@ class ProductModel {
           ? CategoryModel.fromJson(json['category'] as Map<String, dynamic>)
           : null,
       images: (json['images'] as List<dynamic>? ?? [])
-          .map((item) => ProductImageModel.fromJson(item as Map<String, dynamic>))
+          .map((item) =>
+              ProductImageModel.fromJson(item as Map<String, dynamic>))
           .toList(),
       shipping: json['shipping'] != null
-          ? ProductShippingModel.fromJson(json['shipping'] as Map<String, dynamic>)
+          ? ProductShippingModel.fromJson(
+              json['shipping'] as Map<String, dynamic>)
           : null,
     );
   }
+}
+
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }
 
 class ProductImageModel {
@@ -105,8 +122,8 @@ class ProductShippingModel {
       id: json['id'] as int,
       productId: json['product_id'] as int,
       shippingType: json['shipping_type'] as String? ?? 'free',
-      flatShippingFee: (json['flat_shipping_fee'] as num?)?.toDouble(),
-      freeShippingMinimum: (json['free_shipping_minimum'] as num?)?.toDouble(),
+      flatShippingFee: _toDouble(json['flat_shipping_fee']),
+      freeShippingMinimum: _toDouble(json['free_shipping_minimum']),
     );
   }
 }

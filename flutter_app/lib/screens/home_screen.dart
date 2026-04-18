@@ -64,7 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       actions: [
-        if (auth.isAuthenticated && auth.user?.role == 'seller')
+        if (auth.isAuthenticated && ((auth.user?.role == 'seller') || (auth.user?.sellerProfile != null)))
           TextButton.icon(
             onPressed: () =>
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const SellerDashboardScreen())),

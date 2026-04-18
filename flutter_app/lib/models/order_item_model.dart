@@ -25,17 +25,32 @@ class OrderItemModel {
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
-      id: json['id'] as int,
-      orderId: json['order_id'] as int,
-      productId: json['product_id'] as int,
-      sellerId: json['seller_id'] as int,
-      quantity: json['quantity'] as int? ?? 0,
-      pricePerUnit: (json['price_per_unit'] as num?)?.toDouble() ?? 0.0,
-      subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
-      shippingFee: (json['shipping_fee'] as num?)?.toDouble() ?? 0.0,
+      id: _toInt(json['id']) ?? 0,
+      orderId: _toInt(json['order_id']) ?? 0,
+      productId: _toInt(json['product_id']) ?? 0,
+      sellerId: _toInt(json['seller_id']) ?? 0,
+      quantity: _toInt(json['quantity']) ?? 0,
+      pricePerUnit: _toDouble(json['price_per_unit']) ?? 0.0,
+      subtotal: _toDouble(json['subtotal']) ?? 0.0,
+      shippingFee: _toDouble(json['shipping_fee']) ?? 0.0,
       product: json['product'] != null
           ? ProductModel.fromJson(json['product'] as Map<String, dynamic>)
           : null,
     );
   }
+}
+
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }

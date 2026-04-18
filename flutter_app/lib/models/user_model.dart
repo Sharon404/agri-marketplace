@@ -21,7 +21,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as int,
+      id: _toInt(json['id']) ?? 0,
       firstName: json['first_name'] as String? ?? '',
       lastName: json['last_name'] as String? ?? '',
       email: json['email'] as String? ?? '',
@@ -56,13 +56,28 @@ class SellerModel {
 
   factory SellerModel.fromJson(Map<String, dynamic> json) {
     return SellerModel(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
+      id: _toInt(json['id']) ?? 0,
+      userId: _toInt(json['user_id']) ?? 0,
       businessName: json['business_name'] as String? ?? '',
       description: json['description'] as String?,
       logoUrl: json['logo_url'] as String?,
       verificationStatus: json['verification_status'] as String? ?? 'pending',
-      commissionRate: (json['commission_rate'] as num?)?.toDouble(),
+      commissionRate: _toDouble(json['commission_rate']),
     );
   }
+}
+
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }

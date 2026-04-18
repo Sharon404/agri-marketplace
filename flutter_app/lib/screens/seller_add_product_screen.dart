@@ -111,7 +111,15 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
         'minimum_order_quantity': int.parse(_moqCtrl.text.trim()),
         'is_active': _isActive,
         if (_weightCtrl.text.isNotEmpty) 'weight_per_unit': double.parse(_weightCtrl.text.trim()),
-        if (_uploadedImageUrls.isNotEmpty) 'image_urls': _uploadedImageUrls,
+        if (_uploadedImageUrls.isNotEmpty)
+          'images': _uploadedImageUrls
+              .asMap()
+              .entries
+              .map((entry) => {
+                    'image_url': entry.value,
+                    'is_primary': entry.key == 0,
+                  })
+              .toList(),
         'shipping': {
           'shipping_type': _shippingType,
           if (_shippingType == 'flat' && _flatFeeCtrl.text.isNotEmpty)
@@ -219,7 +227,6 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                 items: const [
                   DropdownMenuItem(value: 'free', child: Text('Free Shipping')),
                   DropdownMenuItem(value: 'flat', child: Text('Flat Rate')),
-                  DropdownMenuItem(value: 'calculated', child: Text('Calculated')),
                 ],
                 onChanged: (v) => setState(() => _shippingType = v ?? 'free'),
               ),

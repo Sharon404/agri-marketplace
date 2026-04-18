@@ -23,11 +23,11 @@ class OrderModel {
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
-      id: json['id'] as int,
-      buyerId: json['buyer_id'] as int,
-      totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 0.0,
-      shippingAmount: (json['shipping_amount'] as num?)?.toDouble() ?? 0.0,
-      commissionAmount: (json['commission_amount'] as num?)?.toDouble() ?? 0.0,
+      id: _toInt(json['id']) ?? 0,
+      buyerId: _toInt(json['buyer_id']) ?? 0,
+      totalAmount: _toDouble(json['total_amount']) ?? 0.0,
+      shippingAmount: _toDouble(json['shipping_amount']) ?? 0.0,
+      commissionAmount: _toDouble(json['commission_amount']) ?? 0.0,
       status: json['status'] as String? ?? 'pending',
       paymentStatus: json['payment_status'] as String? ?? 'unpaid',
       items: (json['items'] as List<dynamic>? ?? [])
@@ -35,4 +35,19 @@ class OrderModel {
           .toList(),
     );
   }
+}
+
+double? _toDouble(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
+int? _toInt(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }
