@@ -1,5 +1,23 @@
+import 'package:flutter/foundation.dart';
+
 import 'category_model.dart';
 import 'user_model.dart';
+
+/// Resolves a potentially relative `/storage/...` URL to an absolute URL.
+/// Images stored on the backend are returned as relative paths; we must
+/// prepend the backend host so Flutter's Image.network can fetch them.
+String resolveImageUrl(String url) {
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  if (url.startsWith('/')) {
+    const host =
+        String.fromEnvironment('STORAGE_BASE_URL', defaultValue: '');
+    if (host.isNotEmpty) return '$host$url';
+    final defaultHost =
+        kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
+    return '$defaultHost$url';
+  }
+  return url;
+}
 
 class ProductModel {
   ProductModel({

@@ -108,44 +108,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                   ? 'KSh ${p.shipping!.flatShippingFee?.toStringAsFixed(0) ?? "-"} flat'
                                   : 'Calculated',
                         ),
-                      if (p.sellerProfile != null) ...[
-                        const SizedBox(height: 12),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Color(0xFF1A5276),
-                              child: Icon(Icons.storefront, color: Colors.white, size: 20),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(p.sellerProfile!.businessName,
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                                  if (p.sellerProfile!.verificationStatus == 'verified')
-                                    const Row(
-                                      children: [
-                                        Icon(Icons.verified, size: 12, color: Color(0xFF27AE60)),
-                                        SizedBox(width: 4),
-                                        Text('Verified Seller', style: TextStyle(fontSize: 11, color: Color(0xFF27AE60))),
-                                      ],
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 8),
                       const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 6),
                       Text(p.description, style: const TextStyle(fontSize: 14, height: 1.5)),
+                      const SizedBox(height: 20),
+                      // Seller / Shop section
+                      if (p.sellerProfile != null) _buildShopSection(p),
+                      const SizedBox(height: 20),
+                      // Reviews section
+                      _buildReviewsSection(),
                       const SizedBox(height: 80),
                     ],
                   ),
@@ -162,7 +136,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   Widget _buildImageGallery(ProductModel p) {
     if (p.images.isEmpty) {
       return AspectRatio(
-        aspectRatio: 1.0,
+        aspectRatio: 16 / 9,
         child: Container(
           color: const Color(0xFFECF0F1),
           child: const Center(child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
@@ -171,14 +145,17 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     return Column(
       children: [
-        AspectRatio(
-          aspectRatio: 1.0,
-          child: Image.network(
-            p.images[_selectedImageIndex].imageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(
-              color: const Color(0xFFECF0F1),
-              child: const Center(child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
+        GestureDetector(
+          onTap: () => _showFullImage(p.images[_selectedImageIndex].imageUrl),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Image.network(
+              resolveImageUrl(p.images[_selectedImageIndex].imageUrl),
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => Container(
+                color: const Color(0xFFECF0F1),
+                child: const Center(child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
+              ),
             ),
           ),
         ),
@@ -202,7 +179,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(2),
                       child: Image.network(
-                        p.images[i].imageUrl,
+                        resolveImageUrl(p.images[i].imageUrl),
                         width: 56,
                         height: 56,
                         fit: BoxFit.cover,
@@ -219,6 +196,147 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  void _showFullImage(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: EdgeInsets.zero,
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  resolveImageUrl(imageUrl),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 80),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShopSection(ProductModel p) {
+    final seller = p.sellerProfile!;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('About the Shop', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: const Color(0xFF1A5276),
+                backgroundImage: seller.logoUrl != null && seller.logoUrl!.isNotEmpty
+                    ? NetworkImage(resolveImageUrl(seller.logoUrl!))
+                    : null,
+                child: seller.logoUrl == null || seller.logoUrl!.isEmpty
+                    ? const Icon(Icons.storefront, color: Colors.white, size: 24)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(seller.businessName,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                    const SizedBox(height: 2),
+                    if (seller.verificationStatus == 'verified')
+                      const Row(
+                        children: [
+                          Icon(Icons.verified, size: 13, color: Color(0xFF27AE60)),
+                          SizedBox(width: 4),
+                          Text('Verified Seller',
+                              style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w500)),
+                        ],
+                      )
+                    else
+                      const Text('Unverified',
+                          style: TextStyle(fontSize: 12, color: Colors.orange)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (seller.description != null && seller.description!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(seller.description!,
+                style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5)),
+          ],
+          const SizedBox(height: 10),
+          const Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 15, color: Color(0xFF1A5276)),
+              SizedBox(width: 4),
+              Text('Kenya', style: TextStyle(fontSize: 13, color: Colors.grey)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewsSection() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Customer Reviews', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              Row(
+                children: List.generate(
+                  5,
+                  (i) => const Icon(Icons.star_border, size: 16, color: Colors.amber),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Center(
+            child: Column(
+              children: [
+                Icon(Icons.rate_review_outlined, size: 40, color: Colors.grey),
+                SizedBox(height: 8),
+                Text('No reviews yet', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                SizedBox(height: 4),
+                Text('Be the first to review this product!',
+                    style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

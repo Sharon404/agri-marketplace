@@ -187,12 +187,12 @@ class _HomeScreenState extends State<HomeScreen> {
           return const Center(child: Text('No products found'));
         }
         return GridView.builder(
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.68,
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
+            crossAxisCount: 3,
+            childAspectRatio: 0.62,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
           ),
           itemCount: products.length,
           itemBuilder: (context, i) => _ProductCard(product: products[i]),
@@ -262,7 +262,7 @@ class _ProductCard extends StatelessWidget {
                 aspectRatio: 1.0,
                 child: primaryImg != null
                     ? Image.network(
-                        primaryImg.imageUrl,
+                        resolveImageUrl(primaryImg.imageUrl),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => _placeholder(),
                       )
@@ -280,41 +280,27 @@ class _ProductCard extends StatelessWidget {
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       'KSh ${product.price.toStringAsFixed(0)}',
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFFE74C3C),
                       ),
                     ),
                     const Spacer(),
-                    Row(
-                      children: [
-                        const Icon(Icons.inventory_2_outlined, size: 10, color: Colors.grey),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            'Stock: ${product.stockQuantity}',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
                     if (product.sellerProfile != null) ...[
-                      const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.storefront, size: 10, color: Colors.grey),
-                          const SizedBox(width: 3),
+                          const Icon(Icons.storefront, size: 9, color: Colors.grey),
+                          const SizedBox(width: 2),
                           Expanded(
                             child: Text(
                               product.sellerProfile!.businessName,
-                              style: const TextStyle(fontSize: 10, color: Colors.grey),
+                              style: const TextStyle(fontSize: 9, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
