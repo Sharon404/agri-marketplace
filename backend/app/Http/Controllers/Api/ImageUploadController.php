@@ -18,9 +18,10 @@ class ImageUploadController extends Controller
         $file  = $request->file('image');
         $name  = Str::uuid() . '.' . $file->getClientOriginalExtension();
         $path  = $file->storeAs('products', $name, 'public');
+        $publicPath = Storage::url($path);
 
         return response()->json([
-            'url'  => Storage::url($path),
+            'url'  => url($publicPath),
             'path' => $path,
         ], 201);
     }

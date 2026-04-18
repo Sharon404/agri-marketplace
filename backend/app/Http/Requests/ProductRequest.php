@@ -23,7 +23,7 @@ class ProductRequest extends FormRequest
             'weight_per_unit' => ['nullable', 'numeric', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
             'images' => ['nullable', 'array'],
-            'images.*.image_url' => ['required_with:images', 'url', 'max:2048'],
+            'images.*.image_url' => ['required_with:images', 'string', 'max:2048', 'regex:/^(https?:\/\/|\/storage\/).+/'],
             'images.*.is_primary' => ['nullable', 'boolean'],
             'shipping' => ['nullable', 'array'],
             'shipping.shipping_type' => ['required_with:shipping', 'in:flat,free'],
