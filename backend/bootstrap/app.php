@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(append: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+
+        $middleware->validateCsrfTokens(except: [
+            'admin/login',
+        ]);
         
         $middleware->alias([]);
     })
