@@ -76,10 +76,7 @@ class ApiService {
     await _clearToken();
   }
 
-  Future<Response<dynamic>> getProducts() async {
-    return _dio.get('/products');
-  }
-
+  // ─── kept for repository compatibility ─────────────────────────────────
   Future<Response<dynamic>> getProductById(int id) async {
     return _dio.get('/products/$id');
   }
@@ -129,6 +126,52 @@ class ApiService {
 
   Future<Response<dynamic>> updateSellerProfile(Map<String, dynamic> payload) async {
     return _dio.patch('/seller/profile', data: payload);
+  }
+
+  // ─── Categories ──────────────────────────────────────────────────────────
+  Future<Response<dynamic>> getCategories() async {
+    return _dio.get('/categories');
+  }
+
+  // ─── Seller product management ────────────────────────────────────────────
+  Future<Response<dynamic>> getMyProducts() async {
+    return _dio.get('/seller/products');
+  }
+
+  Future<Response<dynamic>> createProduct(Map<String, dynamic> data) async {
+    return _dio.post('/products', data: data);
+  }
+
+  Future<Response<dynamic>> updateProduct(int id, Map<String, dynamic> data) async {
+    return _dio.put('/products/$id', data: data);
+  }
+
+  Future<Response<dynamic>> deleteProduct(int id) async {
+    return _dio.delete('/products/$id');
+  }
+
+  /// Upload a single image; returns {'url': '...'} from the server.
+  Future<String> uploadProductImage(String filePath) async {
+    final formData = FormData.fromMap({
+      'image': await MultipartFile.fromFile(filePath, filename: filePath.split('/').last),
+    });
+    final response = await _dio.post('/upload/image', data: formData);
+    return (response.data as Map<String, dynamic>)['url'] as String;
+  }
+
+  Future<String> uploadProductImageBytes(List<int> bytes, String filename) async {
+    final formData = FormData.fromMap({
+      'image': MultipartFile.fromBytes(bytes, filename: filename),
+    });
+    final response = await _dio.post('/upload/image', data: formData);
+    return (response.data as Map<String, dynamic>)['url'] as String;
+  }
+
+  Future<Response<dynamic>> getProducts({int? categoryId, String? search}) async {
+    final params = <String, dynamic>{};
+    if (categoryId != null) params['category_id'] = categoryId;
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    return _dio.get('/products', queryParameters: params.isEmpty ? null : params);
   }
 
   Future<Map<String, dynamic>> _handleAuthResponse(dynamic data) async {

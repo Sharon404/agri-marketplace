@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
-use App\Models\SellerProfile;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -56,6 +55,7 @@ class UserResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query) => $query->with('sellerProfile'))
+            ->selectable(false)
             ->columns([
                 Tables\Columns\TextColumn::make('first_name')
                     ->searchable(),

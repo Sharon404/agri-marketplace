@@ -12,6 +12,7 @@ import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/orders_screen.dart';
 import 'screens/register_screen.dart';
+import 'screens/seller_add_product_screen.dart';
 import 'screens/seller_dashboard_screen.dart';
 import 'services/api_service.dart';
 
@@ -66,6 +67,7 @@ class AgriMarketplaceApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/orders': (context) => const OrdersScreen(),
         '/seller-dashboard': (context) => const SellerDashboardScreen(),
+        '/seller-add-product': (context) => const SellerAddProductScreen(),
       },
     );
   }
