@@ -25,6 +25,23 @@ class ProductController extends Controller
         return ProductResource::collection($products);
     }
 
+    public function myProducts(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role !== 'seller' || !$user->sellerProfile) {
+            return response()->json(['message' => 'Seller profile required.'], 403);
+        }
+
+        $products = Product::query()
+            ->with(['category', 'images', 'shipping'])
+            ->where('seller_id', $user->sellerProfile->id)
+            ->latest()
+            ->paginate(50);
+
+        return ProductResource::collection($products);
+    }
+
     public function show(Product $product)
     {
         $product->load(['sellerProfile', 'category', 'images', 'shipping']);

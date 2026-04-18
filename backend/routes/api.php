@@ -3,7 +3,9 @@
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CartController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\ImageUploadController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\SellerController;
@@ -30,6 +32,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/register/seller', [AuthController::class, 'registerSeller']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
 
@@ -48,6 +51,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/products', [ProductController::class, 'store']);
     Route::put('/products/{product}', [ProductController::class, 'update']);
     Route::delete('/products/{product}', [ProductController::class, 'destroy']);
+    Route::post('/upload/image', [ImageUploadController::class, 'upload']);
+    Route::get('/seller/products', [ProductController::class, 'myProducts']);
 
     Route::get('/cart', [CartController::class, 'show']);
     Route::post('/cart/items', [CartController::class, 'add']);
