@@ -12,8 +12,9 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev \
     zip \
     curl \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo pdo_pgsql zip bcmath gd pcntl sockets \
+        libicu-dev \
+        && docker-php-ext-configure gd --with-freetype --with-jpeg \
+        && docker-php-ext-install pdo pdo_pgsql zip bcmath gd pcntl sockets intl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install composer binary
