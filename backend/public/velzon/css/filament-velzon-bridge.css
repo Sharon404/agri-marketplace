@@ -1,0 +1,100 @@
+/* Filament ↔ Velzon visual bridge */
+
+:root {
+    --vz-radius: 0.75rem;
+    --vz-radius-lg: 1rem;
+    --vz-border: rgba(15, 23, 42, 0.08);
+    --vz-surface: #ffffff;
+    --vz-surface-soft: #f8fafc;
+    --vz-text-soft: #64748b;
+}
+
+.dark {
+    --vz-border: rgba(148, 163, 184, 0.2);
+    --vz-surface: #0f172a;
+    --vz-surface-soft: #111827;
+    --vz-text-soft: #94a3b8;
+}
+
+.fi-body {
+    background: var(--vz-surface-soft);
+}
+
+.fi-sidebar {
+    border-inline-end: 1px solid var(--vz-border);
+    background: var(--vz-surface);
+}
+
+.fi-topbar {
+    border-bottom: 1px solid var(--vz-border);
+    background: var(--vz-surface);
+    backdrop-filter: saturate(120%) blur(6px);
+}
+
+.fi-main {
+    padding-top: 1rem;
+}
+
+.fi-page-header {
+    margin-bottom: 1rem;
+}
+
+.fi-section,
+.fi-ta,
+.fi-widget {
+    border: 1px solid var(--vz-border);
+    border-radius: var(--vz-radius-lg);
+    background: var(--vz-surface);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.fi-section-header {
+    border-bottom: 1px solid var(--vz-border);
+}
+
+.fi-ta-header-toolbar {
+    border-bottom: 1px solid var(--vz-border);
+}
+
+.fi-ta-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.fi-ta-table thead th {
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--vz-text-soft);
+    border-bottom: 1px solid var(--vz-border);
+    background: color-mix(in srgb, var(--vz-surface-soft) 55%, var(--vz-surface));
+}
+
+.fi-ta-table tbody td {
+    border-bottom: 1px solid var(--vz-border);
+}
+
+.fi-ta-table tbody tr:hover td {
+    background: color-mix(in srgb, var(--vz-surface-soft) 70%, var(--vz-surface));
+}
+
+.fi-input,
+.fi-select-input,
+.fi-fo-text-input input,
+.fi-fo-textarea textarea,
+.fi-fo-select select {
+    border-radius: var(--vz-radius);
+}
+
+.fi-btn {
+    border-radius: 0.625rem;
+}
+
+.fi-badge {
+    border-radius: 999px;
+}
+
+.fi-simple-main,
+.fi-main-ctn {
+    max-width: 100%;
+}
