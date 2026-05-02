@@ -213,7 +213,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                   Switch(
                     value: _isActive,
                     onChanged: (v) => setState(() => _isActive = v),
-                    activeColor: const Color(0xFF27AE60),
+                    activeThumbColor: const Color(0xFF27AE60),
                   ),
                 ],
               ),
@@ -222,7 +222,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
             _sectionTitle('Shipping'),
             _card([
               DropdownButtonFormField<String>(
-                value: _shippingType,
+                initialValue: _shippingType,
                 decoration: _inputDecoration('Shipping Type'),
                 items: const [
                   DropdownMenuItem(value: 'free', child: Text('Free Shipping')),
@@ -334,7 +334,7 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
           allCats.addAll(parent.children);
         }
         return DropdownButtonFormField<int>(
-          value: _selectedCategoryId,
+          initialValue: _selectedCategoryId,
           decoration: _inputDecoration('Category *'),
           isExpanded: true,
           items: allCats
