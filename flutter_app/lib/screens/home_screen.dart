@@ -201,13 +201,24 @@ class _HomeScreenState extends State<HomeScreen> {
           return const Center(child: Text('No products found'));
         }
         return LayoutBuilder(
-          builder: (context, _) {
-            // Keep card width bounded on larger screens to avoid oversized tiles.
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            int crossAxisCount = 2;
+            if (width >= 1200) {
+              crossAxisCount = 6;
+            } else if (width >= 1000) {
+              crossAxisCount = 5;
+            } else if (width >= 760) {
+              crossAxisCount = 4;
+            } else if (width >= 520) {
+              crossAxisCount = 3;
+            }
+
             return GridView.builder(
               padding: const EdgeInsets.all(8),
-              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                maxCrossAxisExtent: 220,
-                childAspectRatio: 0.7,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                childAspectRatio: 0.78,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
