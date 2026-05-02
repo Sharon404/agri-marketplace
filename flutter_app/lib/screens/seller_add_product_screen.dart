@@ -74,17 +74,21 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
 
   Future<void> _pickAndUploadImage() async {
     final picker = ImagePicker();
-    final XFile? picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    final XFile? picked =
+        await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;
     setState(() => _uploadingImage = true);
     try {
       final bytes = await picked.readAsBytes();
-      final url = await context.read<ProductProvider>().uploadImageBytes(bytes, picked.name);
+      final url = await context
+          .read<ProductProvider>()
+          .uploadImageBytes(bytes, picked.name);
       setState(() => _uploadedImageUrls.add(url));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Upload failed: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Upload failed: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -96,7 +100,9 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('Please select a category'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
@@ -110,7 +116,8 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
         'stock_quantity': int.parse(_stockCtrl.text.trim()),
         'minimum_order_quantity': int.parse(_moqCtrl.text.trim()),
         'is_active': _isActive,
-        if (_weightCtrl.text.isNotEmpty) 'weight_per_unit': double.parse(_weightCtrl.text.trim()),
+        if (_weightCtrl.text.isNotEmpty)
+          'weight_per_unit': double.parse(_weightCtrl.text.trim()),
         if (_uploadedImageUrls.isNotEmpty)
           'images': _uploadedImageUrls
               .asMap()
@@ -165,12 +172,18 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
           if (_saving)
             const Padding(
               padding: EdgeInsets.all(16),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)),
+              child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2)),
             )
           else
             TextButton(
               onPressed: _submit,
-              child: const Text('SAVE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text('SAVE',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
@@ -186,23 +199,35 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
             _card([
               _field(_nameCtrl, 'Product Name *', validator: _required),
               const SizedBox(height: 12),
-              _field(_descCtrl, 'Description *', maxLines: 4, validator: _required),
+              _field(_descCtrl, 'Description *',
+                  maxLines: 4, validator: _required),
               const SizedBox(height: 12),
               _buildCategoryDropdown(),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: _field(_priceCtrl, 'Price (KSh) *', keyboardType: TextInputType.number, validator: _requiredNum)),
+                  Expanded(
+                      child: _field(_priceCtrl, 'Price (KSh) *',
+                          keyboardType: TextInputType.number,
+                          validator: _requiredNum)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_stockCtrl, 'Stock Qty *', keyboardType: TextInputType.number, validator: _requiredInt)),
+                  Expanded(
+                      child: _field(_stockCtrl, 'Stock Qty *',
+                          keyboardType: TextInputType.number,
+                          validator: _requiredInt)),
                 ],
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Expanded(child: _field(_moqCtrl, 'Min. Order Qty *', keyboardType: TextInputType.number, validator: _requiredInt)),
+                  Expanded(
+                      child: _field(_moqCtrl, 'Min. Order Qty *',
+                          keyboardType: TextInputType.number,
+                          validator: _requiredInt)),
                   const SizedBox(width: 12),
-                  Expanded(child: _field(_weightCtrl, 'Weight/Unit (kg)', keyboardType: TextInputType.number)),
+                  Expanded(
+                      child: _field(_weightCtrl, 'Weight/Unit (kg)',
+                          keyboardType: TextInputType.number)),
                 ],
               ),
               const SizedBox(height: 12),
@@ -232,7 +257,8 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               ),
               if (_shippingType == 'flat') ...[
                 const SizedBox(height: 12),
-                _field(_flatFeeCtrl, 'Flat Shipping Fee (KSh)', keyboardType: TextInputType.number),
+                _field(_flatFeeCtrl, 'Flat Shipping Fee (KSh)',
+                    keyboardType: TextInputType.number),
               ],
             ]),
             const SizedBox(height: 80),
@@ -244,14 +270,19 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
 
   Widget _sectionTitle(String title) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1A5276))),
+        child: Text(title,
+            style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: Color(0xFF1A5276))),
       );
 
   Widget _card(List<Widget> children) => Card(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         child: Padding(
           padding: const EdgeInsets.all(14),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+          child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: children),
         ),
       );
 
@@ -273,18 +304,26 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                     children: [
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            _uploadedImageUrls[i],
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                        child: GestureDetector(
+                          onTap: () => _showImagePreview(_uploadedImageUrls[i]),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Container(
                               width: 100,
                               height: 100,
-                              color: const Color(0xFFECF0F1),
-                              child: const Icon(Icons.broken_image, color: Colors.grey),
+                              color: Colors.white,
+                              child: Image.network(
+                                _uploadedImageUrls[i],
+                                fit: BoxFit.contain,
+                                filterQuality: FilterQuality.medium,
+                                errorBuilder: (_, __, ___) => Container(
+                                  width: 100,
+                                  height: 100,
+                                  color: const Color(0xFFECF0F1),
+                                  child: const Icon(Icons.broken_image,
+                                      color: Colors.grey),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -293,10 +332,13 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                         top: 2,
                         right: 10,
                         child: GestureDetector(
-                          onTap: () => setState(() => _uploadedImageUrls.removeAt(i)),
+                          onTap: () =>
+                              setState(() => _uploadedImageUrls.removeAt(i)),
                           child: Container(
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            child: const Icon(Icons.close, size: 16, color: Colors.white),
+                            decoration: const BoxDecoration(
+                                color: Colors.red, shape: BoxShape.circle),
+                            child: const Icon(Icons.close,
+                                size: 16, color: Colors.white),
                           ),
                         ),
                       ),
@@ -306,16 +348,58 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
               ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: _uploadingImage || _uploadedImageUrls.length >= 5 ? null : _pickAndUploadImage,
+              onPressed: _uploadingImage || _uploadedImageUrls.length >= 5
+                  ? null
+                  : _pickAndUploadImage,
               icon: _uploadingImage
-                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2))
                   : const Icon(Icons.add_photo_alternate_outlined),
               label: Text(_uploadingImage
                   ? 'Uploading...'
                   : _uploadedImageUrls.length >= 5
                       ? 'Max 5 images'
                       : 'Add Image (${_uploadedImageUrls.length}/5)'),
-              style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF1A5276)),
+              style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF1A5276)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showImagePreview(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 80,
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: Colors.white),
+              ),
             ),
           ],
         ),
@@ -343,7 +427,9 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
                     child: Text(
                       cat.parentId == null ? cat.name : '  └ ${cat.name}',
                       style: TextStyle(
-                        fontWeight: cat.parentId == null ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: cat.parentId == null
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         fontSize: 13,
                       ),
                     ),
@@ -375,11 +461,13 @@ class _SellerAddProductScreenState extends State<SellerAddProductScreen> {
         labelText: label,
         labelStyle: const TextStyle(fontSize: 13),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         isDense: true,
       );
 
-  String? _required(String? v) => (v == null || v.trim().isEmpty) ? 'Required' : null;
+  String? _required(String? v) =>
+      (v == null || v.trim().isEmpty) ? 'Required' : null;
   String? _requiredNum(String? v) {
     if (v == null || v.trim().isEmpty) return 'Required';
     if (double.tryParse(v.trim()) == null) return 'Invalid number';
