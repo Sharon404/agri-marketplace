@@ -64,6 +64,15 @@
       // Use HTML renderer instead of CanvasKit to avoid CDN dependencies
       window.flutterCanvasKitUrl = null;
     }
+
+    // Prevent stale UI by removing previously registered service workers.
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((regs) => {
+        for (const reg of regs) {
+          reg.unregister();
+        }
+      });
+    }
   </script>
   
   <script src="flutter_bootstrap.js" async></script>

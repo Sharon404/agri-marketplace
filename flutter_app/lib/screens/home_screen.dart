@@ -202,23 +202,11 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         return LayoutBuilder(
           builder: (context, constraints) {
-            final width = constraints.maxWidth;
-            int crossAxisCount = 2;
-            if (width >= 1200) {
-              crossAxisCount = 6;
-            } else if (width >= 1000) {
-              crossAxisCount = 5;
-            } else if (width >= 760) {
-              crossAxisCount = 4;
-            } else if (width >= 520) {
-              crossAxisCount = 3;
-            }
-
             return GridView.builder(
               padding: const EdgeInsets.all(8),
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: crossAxisCount,
-                childAspectRatio: 0.78,
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 95,
+                childAspectRatio: 1.0,
                 crossAxisSpacing: 8,
                 mainAxisSpacing: 8,
               ),
@@ -288,67 +276,39 @@ class _ProductCard extends StatelessWidget {
       child: Card(
         elevation: 1.5,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            // image
-            ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(8)),
-              child: AspectRatio(
-                aspectRatio: 4 / 3,
-                child: primaryImg != null
-                    ? Image.network(
-                        resolveImageUrl(primaryImg.imageUrl),
-                        fit: BoxFit.contain,
-                        filterQuality: FilterQuality.medium,
-                        errorBuilder: (_, __, ___) => _placeholder(),
-                      )
-                    : _placeholder(),
-              ),
-            ),
-            // info
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'KSh ${product.price.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE74C3C),
-                      ),
-                    ),
-                    const Spacer(),
-                    if (product.sellerProfile != null) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.storefront,
-                              size: 9, color: Colors.grey),
-                          const SizedBox(width: 2),
-                          Expanded(
-                            child: Text(
-                              product.sellerProfile!.businessName,
-                              style: const TextStyle(
-                                  fontSize: 9, color: Colors.grey),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
+            primaryImg != null
+                ? Image.network(
+                    resolveImageUrl(primaryImg.imageUrl),
+                    fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    errorBuilder: (_, __, ___) => _placeholder(),
+                  )
+                : _placeholder(),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Color(0xCC000000)],
+                  ),
+                ),
+                child: Text(
+                  product.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
