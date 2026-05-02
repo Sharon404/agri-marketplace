@@ -12,7 +12,7 @@ String resolveImageUrl(String url) {
     const host =
         String.fromEnvironment('STORAGE_BASE_URL', defaultValue: '');
     if (host.isNotEmpty) return '$host$url';
-    final defaultHost =
+    const defaultHost =
         kIsWeb ? 'http://localhost:8000' : 'http://10.0.2.2:8000';
     return '$defaultHost$url';
   }

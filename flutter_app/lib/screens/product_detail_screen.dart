@@ -29,10 +29,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Future<void> _loadProduct() async {
     try {
-      final p = await context.read<ProductProvider>().getProductById(widget.productId);
-      if (mounted) setState(() { _product = p; _loading = false; });
+      final p = await context
+          .read<ProductProvider>()
+          .getProductById(widget.productId);
+      if (mounted)
+        setState(() {
+          _product = p;
+          _loading = false;
+        });
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted)
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
     }
   }
 
@@ -43,18 +53,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF1A5276),
         foregroundColor: Colors.white,
-        title: Text(_product?.name ?? 'Product', maxLines: 1, overflow: TextOverflow.ellipsis),
+        title: Text(_product?.name ?? 'Product',
+            maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             icon: const Icon(Icons.shopping_cart),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
+            onPressed: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const CartScreen())),
           ),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+              ? Center(
+                  child:
+                      Text(_error!, style: const TextStyle(color: Colors.red)))
               : _product == null
                   ? const Center(child: Text('Product not found'))
                   : _buildBody(_product!),
@@ -75,29 +89,41 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(p.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      Text(p.name,
+                          style: const TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Text(
                         'KSh ${p.price.toStringAsFixed(0)}',
-                        style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFFE74C3C)),
+                        style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE74C3C)),
                       ),
                       if (p.category != null) ...[
                         const SizedBox(height: 6),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: const Color(0xFFD5F5E3),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(p.category!.name,
-                              style: const TextStyle(color: Color(0xFF1E8449), fontSize: 12, fontWeight: FontWeight.bold)),
+                              style: const TextStyle(
+                                  color: Color(0xFF1E8449),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
                         ),
                       ],
                       const SizedBox(height: 12),
-                      _infoRow(Icons.inventory_2_outlined, 'Stock available', '${p.stockQuantity} units'),
-                      _infoRow(Icons.shopping_basket_outlined, 'Min. order', '${p.minimumOrderQuantity} units'),
+                      _infoRow(Icons.inventory_2_outlined, 'Stock available',
+                          '${p.stockQuantity} units'),
+                      _infoRow(Icons.shopping_basket_outlined, 'Min. order',
+                          '${p.minimumOrderQuantity} units'),
                       if (p.weightPerUnit != null)
-                        _infoRow(Icons.scale_outlined, 'Weight per unit', '${p.weightPerUnit} kg'),
+                        _infoRow(Icons.scale_outlined, 'Weight per unit',
+                            '${p.weightPerUnit} kg'),
                       if (p.shipping != null)
                         _infoRow(
                           Icons.local_shipping_outlined,
@@ -111,9 +137,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 8),
-                      const Text('Description', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      const Text('Description',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 15)),
                       const SizedBox(height: 6),
-                      Text(p.description, style: const TextStyle(fontSize: 14, height: 1.5)),
+                      Text(p.description,
+                          style: const TextStyle(fontSize: 14, height: 1.5)),
                       const SizedBox(height: 20),
                       // Seller / Shop section
                       if (p.sellerProfile != null) _buildShopSection(p),
@@ -139,7 +168,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         aspectRatio: 16 / 9,
         child: Container(
           color: const Color(0xFFECF0F1),
-          child: const Center(child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
+          child: const Center(
+              child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
         ),
       );
     }
@@ -149,12 +179,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           onTap: () => _showFullImage(p.images[_selectedImageIndex].imageUrl),
           child: AspectRatio(
             aspectRatio: 16 / 9,
-            child: Image.network(
-              resolveImageUrl(p.images[_selectedImageIndex].imageUrl),
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                color: const Color(0xFFECF0F1),
-                child: const Center(child: Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
+            child: Container(
+              color: Colors.white,
+              child: Image.network(
+                resolveImageUrl(p.images[_selectedImageIndex].imageUrl),
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.medium,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFFECF0F1),
+                  child: const Center(
+                      child:
+                          Icon(Icons.eco, size: 80, color: Color(0xFF27AE60))),
+                ),
               ),
             ),
           ),
@@ -171,7 +207,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: i == _selectedImageIndex ? const Color(0xFF1A5276) : Colors.transparent,
+                        color: i == _selectedImageIndex
+                            ? const Color(0xFF1A5276)
+                            : Colors.transparent,
                         width: 2,
                       ),
                       borderRadius: BorderRadius.circular(4),
@@ -212,7 +250,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: Image.network(
                   resolveImageUrl(imageUrl),
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image, color: Colors.white, size: 80),
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (_, __, ___) => const Icon(Icons.broken_image,
+                      color: Colors.white, size: 80),
                 ),
               ),
             ),
@@ -237,23 +277,28 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('About the Shop', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          const Text('About the Shop',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
           const SizedBox(height: 10),
           Row(
             children: [
               CircleAvatar(
                 radius: 24,
                 backgroundColor: const Color(0xFF1A5276),
-                backgroundImage: seller.logoUrl != null && seller.logoUrl!.isNotEmpty
-                    ? NetworkImage(resolveImageUrl(seller.logoUrl!))
-                    : null,
+                backgroundImage:
+                    seller.logoUrl != null && seller.logoUrl!.isNotEmpty
+                        ? NetworkImage(resolveImageUrl(seller.logoUrl!))
+                        : null,
                 child: seller.logoUrl == null || seller.logoUrl!.isEmpty
-                    ? const Icon(Icons.storefront, color: Colors.white, size: 24)
+                    ? const Icon(Icons.storefront,
+                        color: Colors.white, size: 24)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -262,15 +307,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(seller.businessName,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 15)),
                     const SizedBox(height: 2),
                     if (seller.verificationStatus == 'verified')
                       const Row(
                         children: [
-                          Icon(Icons.verified, size: 13, color: Color(0xFF27AE60)),
+                          Icon(Icons.verified,
+                              size: 13, color: Color(0xFF27AE60)),
                           SizedBox(width: 4),
                           Text('Verified Seller',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF27AE60), fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFF27AE60),
+                                  fontWeight: FontWeight.w500)),
                         ],
                       )
                     else
@@ -284,12 +334,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           if (seller.description != null && seller.description!.isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(seller.description!,
-                style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.5)),
+                style: const TextStyle(
+                    fontSize: 13, color: Colors.black87, height: 1.5)),
           ],
           const SizedBox(height: 10),
           const Row(
             children: [
-              Icon(Icons.location_on_outlined, size: 15, color: Color(0xFF1A5276)),
+              Icon(Icons.location_on_outlined,
+                  size: 15, color: Color(0xFF1A5276)),
               SizedBox(width: 4),
               Text('Kenya', style: TextStyle(fontSize: 13, color: Colors.grey)),
             ],
@@ -305,7 +357,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -313,11 +367,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Customer Reviews', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const Text('Customer Reviews',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
               Row(
                 children: List.generate(
                   5,
-                  (i) => const Icon(Icons.star_border, size: 16, color: Colors.amber),
+                  (i) => const Icon(Icons.star_border,
+                      size: 16, color: Colors.amber),
                 ),
               ),
             ],
@@ -328,7 +384,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 Icon(Icons.rate_review_outlined, size: 40, color: Colors.grey),
                 SizedBox(height: 8),
-                Text('No reviews yet', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                Text('No reviews yet',
+                    style: TextStyle(color: Colors.grey, fontSize: 13)),
                 SizedBox(height: 4),
                 Text('Be the first to review this product!',
                     style: TextStyle(color: Colors.grey, fontSize: 12)),
@@ -345,7 +402,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))],
+        boxShadow: [
+          BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, -2))
+        ],
       ),
       child: Row(
         children: [
@@ -359,17 +418,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               children: [
                 IconButton(
                   icon: const Icon(Icons.remove, size: 16),
-                  onPressed: _quantity > p.minimumOrderQuantity ? () => setState(() => _quantity--) : null,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  onPressed: _quantity > p.minimumOrderQuantity
+                      ? () => setState(() => _quantity--)
+                      : null,
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Text('$_quantity', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  child: Text('$_quantity',
+                      style: const TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add, size: 16),
-                  onPressed: _quantity < p.stockQuantity ? () => setState(() => _quantity++) : null,
-                  constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                  onPressed: _quantity < p.stockQuantity
+                      ? () => setState(() => _quantity++)
+                      : null,
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 36),
                 ),
               ],
             ),
@@ -381,14 +447,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 backgroundColor: const Color(0xFFE74C3C),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6)),
               ),
-              onPressed: p.stockQuantity > 0 && !_addingToCart ? _addToCart : null,
+              onPressed:
+                  p.stockQuantity > 0 && !_addingToCart ? _addToCart : null,
               icon: _addingToCart
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
                   : const Icon(Icons.shopping_cart_outlined),
               label: Text(p.stockQuantity > 0 ? 'Add to Cart' : 'Out of Stock',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15)),
             ),
           ),
         ],
@@ -408,7 +481,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             action: SnackBarAction(
               label: 'VIEW CART',
               textColor: Colors.white,
-              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const CartScreen())),
             ),
           ),
         );
@@ -430,8 +504,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           children: [
             Icon(icon, size: 15, color: Colors.grey),
             const SizedBox(width: 6),
-            Text('$label: ', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-            Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            Text('$label: ',
+                style: const TextStyle(fontSize: 13, color: Colors.grey)),
+            Text(value,
+                style:
+                    const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           ],
         ),
       );

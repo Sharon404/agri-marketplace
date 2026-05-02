@@ -56,20 +56,26 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFF1A5276),
       foregroundColor: Colors.white,
       elevation: 0,
-      title: Row(
+      title: const Row(
         children: [
-          const Icon(Icons.eco, color: Color(0xFF58D68D), size: 22),
-          const SizedBox(width: 6),
-          const Text('AgriMarket', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          Icon(Icons.eco, color: Color(0xFF58D68D), size: 22),
+          SizedBox(width: 6),
+          Text('AgriMarket',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
         ],
       ),
       actions: [
-        if (auth.isAuthenticated && ((auth.user?.role == 'seller') || (auth.user?.sellerProfile != null)))
+        if (auth.isAuthenticated &&
+            ((auth.user?.role == 'seller') ||
+                (auth.user?.sellerProfile != null)))
           TextButton.icon(
-            onPressed: () =>
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const SellerDashboardScreen())),
+            onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const SellerDashboardScreen())),
             icon: const Icon(Icons.storefront, color: Colors.white, size: 18),
-            label: const Text('My Shop', style: TextStyle(color: Colors.white, fontSize: 12)),
+            label: const Text('My Shop',
+                style: TextStyle(color: Colors.white, fontSize: 12)),
           ),
         if (auth.isAuthenticated)
           IconButton(
@@ -109,7 +115,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
                   borderSide: BorderSide.none,
@@ -139,7 +146,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               children: [
                 _catChip(context, null, 'All', provider),
-                ...cats.map((cat) => _catChip(context, cat.id, cat.name, provider)),
+                ...cats.map(
+                    (cat) => _catChip(context, cat.id, cat.name, provider)),
               ],
             ),
           ),
@@ -148,12 +156,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _catChip(BuildContext context, int? id, String label, ProductProvider provider) {
+  Widget _catChip(
+      BuildContext context, int? id, String label, ProductProvider provider) {
     final selected = provider.selectedCategoryId == id;
     return Padding(
       padding: const EdgeInsets.only(right: 6),
       child: ChoiceChip(
-        label: Text(label, style: TextStyle(fontSize: 12, color: selected ? Colors.white : Colors.black87)),
+        label: Text(label,
+            style: TextStyle(
+                fontSize: 12, color: selected ? Colors.white : Colors.black87)),
         selected: selected,
         selectedColor: const Color(0xFF1A5276),
         backgroundColor: const Color(0xFFF0F0F0),
@@ -175,9 +186,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(provider.error!, style: const TextStyle(color: Colors.red)),
+                Text(provider.error!,
+                    style: const TextStyle(color: Colors.red)),
                 const SizedBox(height: 8),
-                ElevatedButton(onPressed: provider.loadProducts, child: const Text('Retry')),
+                ElevatedButton(
+                    onPressed: provider.loadProducts,
+                    child: const Text('Retry')),
               ],
             ),
           );
@@ -186,16 +200,21 @@ class _HomeScreenState extends State<HomeScreen> {
         if (products.isEmpty) {
           return const Center(child: Text('No products found'));
         }
-        return GridView.builder(
-          padding: const EdgeInsets.all(8),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            childAspectRatio: 0.62,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
-          ),
-          itemCount: products.length,
-          itemBuilder: (context, i) => _ProductCard(product: products[i]),
+        return LayoutBuilder(
+          builder: (context, _) {
+            // Keep card width bounded on larger screens to avoid oversized tiles.
+            return GridView.builder(
+              padding: const EdgeInsets.all(8),
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 220,
+                childAspectRatio: 0.7,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: products.length,
+              itemBuilder: (context, i) => _ProductCard(product: products[i]),
+            );
+          },
         );
       },
     );
@@ -207,7 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
         final count = cart.cart?.items.length ?? 0;
         return FloatingActionButton.extended(
           backgroundColor: const Color(0xFFE74C3C),
-          onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CartScreen())),
+          onPressed: () => Navigator.push(
+              context, MaterialPageRoute(builder: (_) => const CartScreen())),
           icon: Stack(
             clipBehavior: Clip.none,
             children: [
@@ -219,7 +239,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: CircleAvatar(
                     radius: 7,
                     backgroundColor: Colors.white,
-                    child: Text('$count', style: const TextStyle(fontSize: 9, color: Color(0xFFE74C3C), fontWeight: FontWeight.bold)),
+                    child: Text('$count',
+                        style: const TextStyle(
+                            fontSize: 9,
+                            color: Color(0xFFE74C3C),
+                            fontWeight: FontWeight.bold)),
                   ),
                 ),
             ],
@@ -247,7 +271,8 @@ class _ProductCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ProductDetailScreen(productId: product.id)),
+        MaterialPageRoute(
+            builder: (_) => ProductDetailScreen(productId: product.id)),
       ),
       child: Card(
         elevation: 1.5,
@@ -257,13 +282,15 @@ class _ProductCard extends StatelessWidget {
           children: [
             // image
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(8)),
               child: AspectRatio(
-                aspectRatio: 1.0,
+                aspectRatio: 4 / 3,
                 child: primaryImg != null
                     ? Image.network(
                         resolveImageUrl(primaryImg.imageUrl),
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.medium,
                         errorBuilder: (_, __, ___) => _placeholder(),
                       )
                     : _placeholder(),
@@ -280,7 +307,8 @@ class _ProductCard extends StatelessWidget {
                       product.name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style: const TextStyle(
+                          fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -295,12 +323,14 @@ class _ProductCard extends StatelessWidget {
                     if (product.sellerProfile != null) ...[
                       Row(
                         children: [
-                          const Icon(Icons.storefront, size: 9, color: Colors.grey),
+                          const Icon(Icons.storefront,
+                              size: 9, color: Colors.grey),
                           const SizedBox(width: 2),
                           Expanded(
                             child: Text(
                               product.sellerProfile!.businessName,
-                              style: const TextStyle(fontSize: 9, color: Colors.grey),
+                              style: const TextStyle(
+                                  fontSize: 9, color: Colors.grey),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -319,6 +349,7 @@ class _ProductCard extends StatelessWidget {
 
   Widget _placeholder() => Container(
         color: const Color(0xFFECF0F1),
-        child: const Center(child: Icon(Icons.eco, size: 40, color: Color(0xFF27AE60))),
+        child: const Center(
+            child: Icon(Icons.eco, size: 40, color: Color(0xFF27AE60))),
       );
 }
